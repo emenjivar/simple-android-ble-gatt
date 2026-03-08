@@ -13,6 +13,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresPermission
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -106,29 +108,42 @@ class MainActivity : ComponentActivity() {
                         }
 
                         items(devices.toList()) { device ->
-                            Row {
+                            val isConnected = connectedDevice?.address == device.address
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text(
                                     modifier = Modifier.weight(1f),
                                     text = "device: ${device.name}, address: ${device.address}"
                                 )
-                                Button(
-                                    enabled = !isConnecting,
-                                    onClick = {
-                                        if (connectedDevice?.address == device.address) {
-                                            bluetoothManager.disconnect()
-                                        } else {
-                                            bluetoothManager.connect(device)
+
+                                Column {
+                                    Button(
+                                        enabled = !isConnecting,
+                                        onClick = {
+                                            if (isConnected) {
+                                                bluetoothManager.disconnect()
+                                            } else {
+                                                bluetoothManager.connect(device)
+                                            }
+                                        }
+                                    ) {
+                                        Text(
+                                            text = if (isConnected) {
+                                                "disconnect"
+                                            } else {
+                                                "Connect"
+                                            }
+                                        )
+                                    }
+
+                                    AnimatedVisibility(isConnected) {
+                                        Button(onClick = { bluetoothManager.readCharacteristic() }) {
+                                            Text(text = "Read characteristic")
                                         }
                                     }
-                                ) {
-                                    Text(
-                                        text = if (connectedDevice?.address == device.address) {
-                                            "disconnect"
-                                        } else {
-                                            "Connect"
-                                        }
-                                    )
                                 }
+
                             }
                         }
                     }

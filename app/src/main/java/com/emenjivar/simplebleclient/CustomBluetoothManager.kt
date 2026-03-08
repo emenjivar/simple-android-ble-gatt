@@ -4,6 +4,7 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
+import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.ScanCallback
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.util.UUID
 
 class CustomBluetoothManager(private val context: Context) {
     private var bluetoothGatt: BluetoothGatt? = null
@@ -93,6 +95,30 @@ class CustomBluetoothManager(private val context: Context) {
                 }
             }
         }
+
+        override fun onCharacteristicRead(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            value: ByteArray,
+            status: Int
+        ) {
+            super.onCharacteristicRead(gatt, characteristic, value, status)
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                val value = characteristic?.value?.toString(Charsets.UTF_8)
+                Log.wtf("CustomBluetoothManager", "*read value: $value")
+            }
+        }
+
+        override fun onCharacteristicRead(
+            gatt: BluetoothGatt?,
+            characteristic: BluetoothGattCharacteristic?,
+            status: Int
+        ) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                val value = characteristic?.value?.toString(Charsets.UTF_8)
+                Log.wtf("CustomBluetoothManager", "read value: $value")
+            }
+        }
     }
 
     fun connect(device: BluetoothDevice) {
@@ -104,5 +130,16 @@ class CustomBluetoothManager(private val context: Context) {
     fun disconnect() {
         _isConnecting.update { true }
         bluetoothGatt?.disconnect()
+    }
+
+    private val SERVICE_UUID = UUID.fromString("290edf15-b540-4e83-83cf-ba647bf4df20")
+    private val CHARACTERISTIC_UUID = UUID.fromString("290edf15-b540-4e83-83cf-ba647bf4df21")
+
+    fun readCharacteristic() {
+        val characteristic = bluetoothGatt
+            ?.getService(SERVICE_UUID)
+            ?.getCharacteristic(CHARACTERISTIC_UUID)
+
+        bluetoothGatt?.readCharacteristic(characteristic)
     }
 }
