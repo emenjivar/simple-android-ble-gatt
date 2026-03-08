@@ -4,9 +4,11 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
+import android.os.ParcelUuid
 import android.util.Log
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,11 +46,14 @@ class CustomBluetoothManager(context: Context) {
     }
 
     fun startScan() {
+        val filter = ScanFilter.Builder()
+            .setServiceUuid(ParcelUuid.fromString("290edf15-b540-4e83-83cf-ba647bf4df20"))
+            .build()
         val setting = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .build()
         _pairedDevices.update { emptyList() }
-        bluetoothAdapter?.bluetoothLeScanner?.startScan(null, setting, scanCallback)
+        bluetoothAdapter?.bluetoothLeScanner?.startScan(listOf(filter), setting, scanCallback)
     }
 
     fun stopScan() {
