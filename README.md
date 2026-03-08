@@ -20,3 +20,28 @@ run the server
 ```bash
 sudo python3 gatt_server.py
 ```
+
+### I'm not able to connect to the GATT server anymore
+
+Execute and copy the output
+```bash
+charlie@charlie-asus:~/Documents/repositories/simple-android-ble-gatt$ which bluetoothd
+/usr/sbin/bluetoothd
+```
+
+Open the bluetooth configuration file
+```
+sudo vim /etc/systemd/system/bluetooth.target.wants/bluetooth.service
+```
+
+Then add the flag ``--experimental``:
+```
+# ExecStart=/usr/lib/bluetooth/bluetoothd 
+ExecStart=/usr/sbin/bluetoothd --experimental
+``
+
+Now reset the bluetooth daemon
+```
+sudo systemctl daemon-reload
+sudo systemctl restart bluetooth
+```
