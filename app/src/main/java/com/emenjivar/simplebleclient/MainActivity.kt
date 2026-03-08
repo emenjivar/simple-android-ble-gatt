@@ -1,18 +1,16 @@
 package com.emenjivar.simplebleclient
 
 import android.Manifest
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothManager
-import android.bluetooth.le.ScanCallback
-import android.bluetooth.le.ScanResult
-import android.bluetooth.le.ScanSettings
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
+import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.annotation.RequiresPermission
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,11 +32,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.emenjivar.simplebleclient.permission.PermissionDeniedDialog
+import com.emenjivar.simplebleclient.permission.PermissionsExplanationDialog
 import com.emenjivar.simplebleclient.ui.theme.SimpleBLEClientTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.accompanist.permissions.shouldShowRationale
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private lateinit var bluetoothManager: CustomBluetoothManager
@@ -51,6 +52,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val coroutineScope = rememberCoroutineScope()
+            // Prompt system settings to manually grant access to the permissions
+            val openPermissionDeniedDialog = remember { mutableStateOf(false) }
+
             SimpleBLEClientTheme {
                 val devices by bluetoothManager.pairedDevices.collectAsStateWithLifecycle()
                 val connectedDevice by bluetoothManager.connectedDevice.collectAsStateWithLifecycle()
@@ -64,7 +68,7 @@ class MainActivity : ComponentActivity() {
                 } else {
                     listOf(Manifest.permission.ACCESS_FINE_LOCATION)
                 }
-                val permissionState = rememberMultiplePermissionsState(permission)
+                val permissionState = rememberMultiplePermissionsState(permissions = permission)
                 var isScanning by remember { mutableStateOf(false) }
 
                 LaunchedEffect(isScanning) {
@@ -75,17 +79,23 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                LaunchedEffect(permissionState) {
+                LaunchedEffect(
+                    permissionState.allPermissionsGranted,
+                    permissionState.shouldShowRationale
+                ) {
                     when {
                         permissionState.allPermissionsGranted -> {
-                            Log.wtf("MainActivity", "all permission granted")
-                            bluetoothManager.startScan()
-                            isScanning = true
+                            bluetoothManager.startScan(
+                                onSuccess = { isScanning = true },
+                                promptEnableBluetooth = { intent, _ ->
+                                    enableBluetoothLaunched.launch(intent)
+                                }
+                            )
                         }
 
                         permissionState.shouldShowRationale -> {
-                            Log.wtf("MainActivity", "Some denied but can still ask")
-                            permissionState.launchMultiplePermissionRequest()
+                            // Permission denied by the user, but we can prompt again the permissions
+                            openPermissionDeniedDialog.value = true
                         }
 
                         // Never asked
@@ -99,10 +109,10 @@ class MainActivity : ComponentActivity() {
                     LazyColumn (modifier = Modifier.padding(innerPadding)) {
                         item {
                             Text(
-                                text = if (isScanning) {
-                                    "Scanning in progress"
-                                } else {
-                                    "List of devices"
+                                text = when {
+                                    !permissionState.allPermissionsGranted -> "No permissions granted"
+                                    isScanning -> "Scanning in progress"
+                                    else -> "List of devices"
                                 }
                             )
                         }
@@ -148,6 +158,37 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+                if (openPermissionDeniedDialog.value) {
+                    PermissionDeniedDialog(
+                        onDismissRequest = { openPermissionDeniedDialog.value = false },
+                        openSettings = {
+                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", applicationContext.packageName, null)
+                            }
+
+                            startActivity(intent)
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    private val enableBluetoothLaunched = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        when (result.resultCode) {
+            RESULT_OK -> {
+                // Is it possible to launch scanning here?
+                Toast.makeText(
+                    applicationContext,
+                    "Bluetooth enabled", Toast.LENGTH_SHORT
+                ).show()
+            }
+            RESULT_CANCELED -> {
+                Toast.makeText(
+                    applicationContext,
+                    "Grant all the permissions to continue", Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }
