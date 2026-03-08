@@ -52,6 +52,7 @@ class MainActivity : ComponentActivity() {
             SimpleBLEClientTheme {
                 val devices by bluetoothManager.pairedDevices.collectAsStateWithLifecycle()
                 val connectedDevice by bluetoothManager.connectedDevice.collectAsStateWithLifecycle()
+                val isConnecting by bluetoothManager.isConnecting.collectAsStateWithLifecycle()
 
                 val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     listOf(
@@ -111,6 +112,7 @@ class MainActivity : ComponentActivity() {
                                     text = "device: ${device.name}, address: ${device.address}"
                                 )
                                 Button(
+                                    enabled = !isConnecting,
                                     onClick = {
                                         if (connectedDevice?.address == device.address) {
                                             bluetoothManager.disconnect()

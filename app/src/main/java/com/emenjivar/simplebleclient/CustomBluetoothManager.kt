@@ -31,6 +31,9 @@ class CustomBluetoothManager(private val context: Context) {
     private val _connectedDevice = MutableStateFlow<BluetoothDevice?>(null)
     val connectedDevice = _connectedDevice.asStateFlow()
 
+    private val _isConnecting = MutableStateFlow(false)
+    val isConnecting = _isConnecting.asStateFlow()
+
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
             super.onScanResult(callbackType, result)
@@ -76,23 +79,30 @@ class CustomBluetoothManager(private val context: Context) {
                     Log.wtf("CustomBluetoothManager", "connected to ${gatt?.device?.address}")
                     _connectedDevice.update { gatt?.device}
                     gatt?.discoverServices()
+                    _isConnecting.update { false }
                 }
                 BluetoothProfile.STATE_DISCONNECTED -> {
                     Log.wtf("CustomBluetoothManager", "disconnected to ${gatt?.device?.address}, status: $status")
                     bluetoothGatt?.close()
                     _connectedDevice.update { null }
                     bluetoothGatt = null
+                    _isConnecting.update { false }
+                }
+                BluetoothProfile.STATE_CONNECTING, BluetoothProfile.STATE_DISCONNECTING -> {
+                    _isConnecting.update { true }
                 }
             }
         }
     }
 
     fun connect(device: BluetoothDevice) {
+        _isConnecting.update { true }
         stopScan()
         bluetoothGatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
     }
 
     fun disconnect() {
+        _isConnecting.update { true }
         bluetoothGatt?.disconnect()
     }
 }
