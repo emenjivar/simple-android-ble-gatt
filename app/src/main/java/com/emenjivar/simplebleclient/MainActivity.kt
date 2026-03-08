@@ -14,10 +14,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -33,6 +36,7 @@ import com.emenjivar.simplebleclient.ui.theme.SimpleBLEClientTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private lateinit var bluetoothManager: CustomBluetoothManager
@@ -44,8 +48,11 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
+            val coroutineScope = rememberCoroutineScope()
             SimpleBLEClientTheme {
                 val devices by bluetoothManager.pairedDevices.collectAsStateWithLifecycle()
+                val connectedDevice by bluetoothManager.connectedDevice.collectAsStateWithLifecycle()
+
                 val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     listOf(
                         Manifest.permission.BLUETOOTH_SCAN,
@@ -59,7 +66,7 @@ class MainActivity : ComponentActivity() {
 
                 LaunchedEffect(isScanning) {
                     if (isScanning) {
-                        delay(10_000)
+                        delay(5_000)
                         bluetoothManager.stopScan()
                         isScanning = false
                     }
@@ -98,7 +105,29 @@ class MainActivity : ComponentActivity() {
                         }
 
                         items(devices.toList()) { device ->
-                            Text("device: ${device.name}, address: ${device.address}")
+                            Row {
+                                Text(
+                                    modifier = Modifier.weight(1f),
+                                    text = "device: ${device.name}, address: ${device.address}"
+                                )
+                                Button(
+                                    onClick = {
+                                        if (connectedDevice?.address == device.address) {
+                                            bluetoothManager.disconnect()
+                                        } else {
+                                            bluetoothManager.connect(device)
+                                        }
+                                    }
+                                ) {
+                                    Text(
+                                        text = if (connectedDevice?.address == device.address) {
+                                            "disconnect"
+                                        } else {
+                                            "Connect"
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }

@@ -2,7 +2,10 @@ package com.emenjivar.simplebleclient
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothGatt
+import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
@@ -10,18 +13,23 @@ import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.os.ParcelUuid
 import android.util.Log
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-class CustomBluetoothManager(context: Context) {
+class CustomBluetoothManager(private val context: Context) {
+    private var bluetoothGatt: BluetoothGatt? = null
     private val bluetoothManager: BluetoothManager = context.getSystemService(BluetoothManager::class.java)
     private val bluetoothAdapter: BluetoothAdapter? = bluetoothManager.adapter
 
     private val _pairedDevices = MutableStateFlow<List<BluetoothDevice>>(emptyList())
     val pairedDevices = _pairedDevices.asStateFlow()
+
+    private val _connectedDevice = MutableStateFlow<BluetoothDevice?>(null)
+    val connectedDevice = _connectedDevice.asStateFlow()
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
@@ -58,5 +66,33 @@ class CustomBluetoothManager(context: Context) {
 
     fun stopScan() {
         bluetoothAdapter?.bluetoothLeScanner?.stopScan(scanCallback)
+    }
+
+    private val gattCallback = object : BluetoothGattCallback() {
+        override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
+            Log.d("BLE", "onConnectionStateChange status=$status newState=$newState")
+            when (newState) {
+                BluetoothProfile.STATE_CONNECTED -> {
+                    Log.wtf("CustomBluetoothManager", "connected to ${gatt?.device?.address}")
+                    _connectedDevice.update { gatt?.device}
+                    gatt?.discoverServices()
+                }
+                BluetoothProfile.STATE_DISCONNECTED -> {
+                    Log.wtf("CustomBluetoothManager", "disconnected to ${gatt?.device?.address}, status: $status")
+                    bluetoothGatt?.close()
+                    _connectedDevice.update { null }
+                    bluetoothGatt = null
+                }
+            }
+        }
+    }
+
+    fun connect(device: BluetoothDevice) {
+        stopScan()
+        bluetoothGatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+    }
+
+    fun disconnect() {
+        bluetoothGatt?.disconnect()
     }
 }
