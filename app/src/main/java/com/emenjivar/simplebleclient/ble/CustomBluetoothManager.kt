@@ -1,6 +1,5 @@
-package com.emenjivar.simplebleclient
+package com.emenjivar.simplebleclient.ble
 
-import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
@@ -16,11 +15,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.ParcelUuid
 import android.util.Log
-import androidx.annotation.RequiresPermission
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.util.UUID
@@ -61,23 +56,16 @@ class CustomBluetoothManager(private val context: Context) {
         }
     }
 
-//    @RequiresPermission(
-//        allOf = [Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN]
-//    )
-    fun startScan(
-        onSuccess: () -> Unit,
-        promptEnableBluetooth: (Intent, Int) -> Unit
-    ) {
+    fun startScan() {
         if (bluetoothAdapter == null) {
             throw Exception("Bluetooth not supported")
         }
 
         if (!bluetoothAdapter.isEnabled) {
             // Bluetooth was manually disabled, prompt the user to enable it
-            val enableBluetoothIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-            promptEnableBluetooth(enableBluetoothIntent, REQUEST_ENABLE_BLUETOOTH)
-            return
+            throw BluetoothDisabledException()
         }
+
         val filter = ScanFilter.Builder()
             .setServiceUuid(ParcelUuid.fromString("290edf15-b540-4e83-83cf-ba647bf4df20"))
             .build()
@@ -86,7 +74,6 @@ class CustomBluetoothManager(private val context: Context) {
             .build()
         _pairedDevices.update { emptyList() }
         bluetoothAdapter.bluetoothLeScanner?.startScan(listOf(filter), setting, scanCallback)
-        onSuccess()
     }
 
     fun stopScan() {
@@ -124,7 +111,7 @@ class CustomBluetoothManager(private val context: Context) {
         ) {
             super.onCharacteristicRead(gatt, characteristic, value, status)
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                val value = characteristic?.value?.toString(Charsets.UTF_8)
+                val value = value.toString(Charsets.UTF_8)
                 Log.wtf("CustomBluetoothManager", "*read value: $value")
             }
         }
@@ -161,9 +148,5 @@ class CustomBluetoothManager(private val context: Context) {
             ?.getCharacteristic(CHARACTERISTIC_UUID)
 
         bluetoothGatt?.readCharacteristic(characteristic)
-    }
-
-    companion object {
-        const val REQUEST_ENABLE_BLUETOOTH = 1010
     }
 }
