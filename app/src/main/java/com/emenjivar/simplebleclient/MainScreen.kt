@@ -55,6 +55,7 @@ fun MainScreen(
     val devices by bluetoothManager.pairedDevices.collectAsStateWithLifecycle()
     val connectedDevice by bluetoothManager.connectedDevice.collectAsStateWithLifecycle()
     val isConnecting by bluetoothManager.isConnecting.collectAsStateWithLifecycle()
+    val value by bluetoothManager.readValue.collectAsStateWithLifecycle()
     val permissionState = rememberMultiplePermissionsState(permissions = permissions)
     val openPermissionDeniedDialog = remember { mutableStateOf(false) }
     var isScanning by remember { mutableStateOf(false) }
@@ -113,10 +114,14 @@ fun MainScreen(
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        modifier = Modifier.weight(1f),
-                        text = "device: ${device.name}, address: ${device.address}"
-                    )
+                    Column(modifier = Modifier.weight(1f),) {
+                        Text(
+                            text = "device: ${device.name}, address: ${device.address}"
+                        )
+                        AnimatedVisibility(value != null) {
+                            Text(text = "read value: $value")
+                        }
+                    }
 
                     Column {
                         Button(
@@ -139,8 +144,13 @@ fun MainScreen(
                         }
 
                         AnimatedVisibility(isConnected) {
-                            Button(onClick = { bluetoothManager.readCharacteristic() }) {
-                                Text(text = "Read characteristic")
+                            Column {
+                                Button(onClick = { bluetoothManager.readCharacteristic() }) {
+                                    Text(text = "Read characteristic")
+                                }
+                                Button(onClick = { bluetoothManager.writeCharacteristic("Hello ${System.currentTimeMillis()}")}) {
+                                    Text(text = "Write characteristic")
+                                }
                             }
                         }
                     }

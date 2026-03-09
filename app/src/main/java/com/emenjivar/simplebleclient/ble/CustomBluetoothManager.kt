@@ -12,7 +12,6 @@ import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
-import android.content.Intent
 import android.os.ParcelUuid
 import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +32,9 @@ class CustomBluetoothManager(private val context: Context) {
 
     private val _isConnecting = MutableStateFlow(false)
     val isConnecting = _isConnecting.asStateFlow()
+
+    private val _readValue = MutableStateFlow<String?>(null)
+    val readValue = _readValue.asStateFlow()
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
@@ -109,9 +111,9 @@ class CustomBluetoothManager(private val context: Context) {
             value: ByteArray,
             status: Int
         ) {
-            super.onCharacteristicRead(gatt, characteristic, value, status)
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 val value = value.toString(Charsets.UTF_8)
+                _readValue.update { value }
                 Log.wtf("CustomBluetoothManager", "*read value: $value")
             }
         }
@@ -145,8 +147,20 @@ class CustomBluetoothManager(private val context: Context) {
     fun readCharacteristic() {
         val characteristic = bluetoothGatt
             ?.getService(SERVICE_UUID)
-            ?.getCharacteristic(CHARACTERISTIC_UUID)
+            ?.getCharacteristic(CHARACTERISTIC_UUID) ?: throw CharacteristicNotFoundException()
 
         bluetoothGatt?.readCharacteristic(characteristic)
+    }
+
+    fun writeCharacteristic(value: String) {
+        val characteristic = bluetoothGatt
+            ?.getService(SERVICE_UUID)
+            ?.getCharacteristic(CHARACTERISTIC_UUID) ?: throw CharacteristicNotFoundException()
+
+        bluetoothGatt?.writeCharacteristic(
+            characteristic,
+            value.toByteArray(Charsets.UTF_8),
+            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+        )
     }
 }
