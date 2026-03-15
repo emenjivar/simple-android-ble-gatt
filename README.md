@@ -1,7 +1,7 @@
 # simple-android-ble-gatt
 Minimal gatt server written in python for controlling a led using BLE.
 
-# Installacion
+# Installation
 ## Prerequisites
 ```bash
 sudo apt install libcairo2-dev -y
