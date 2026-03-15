@@ -38,10 +38,35 @@ Then add the flag ``--experimental``:
 ```
 # ExecStart=/usr/lib/bluetooth/bluetoothd 
 ExecStart=/usr/sbin/bluetoothd --experimental
-``
+```
 
 Now reset the bluetooth daemon
 ```
 sudo systemctl daemon-reload
 sudo systemctl restart bluetooth
 ```
+
+## Raspberry installation
+
+### Prerequisites
+```bash
+sudo apt install libcairo2-dev -y
+sudo apt install libgirepository1.0-dev -y
+sudo apt install libdbus-1-dev -y
+
+```
+
+### Setup virtual environment
+```bash
+python3 -m venv ~/venv_bluetooth --system-site-packages
+source ~/venv_bluetooth/bin/activate
+pip install bluezero
+```
+
+### Running the server
+```bash
+source ~/venv_bluetooth/bin/activate
+python 3 gatt_server.py
+```
+
+> To exit the virtual environment, run `reactivate`
