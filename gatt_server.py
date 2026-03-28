@@ -22,18 +22,17 @@ def read_value():
 def notify_callback(notifying, characteristic):
     if notifying:
         print("[NOTIFY] Client subscribed to notifications")
+        return list(LED_STATE)
     else:
         print("[NOTIFY] Client unsubscribed from notifications")
 
 def write_value(value, options):
     global LED_STATE
-    byte_val = bytes(value)
-    command = byte_val[0]
-
+    command = bytes(value)[0]
     if command not in (LED_OFF, LED_ON):
         raise ValueError(f"[ERROR] Invalid value: {hex(command)}.")
 
-    LED_STATE = byte_val
+    LED_STATE = bytes([command])  # fix here
     print(f"[WRITE] Characteristic was written: {LED_STATE}")
 
     if command == LED_ON:
@@ -41,8 +40,7 @@ def write_value(value, options):
     elif command == LED_OFF:
         led.off()
 
-    # Trigger BLE notification to all subscribed clients
-    app.update_value(src_id=1, chr_id=1)
+    app.update_value(srv_id=1, chr_id=1)
 
 def main():
     global app
@@ -66,7 +64,7 @@ def main():
         chr_id = 1,
         uuid = CHARACTERISTIC_UUID,
         value = [],
-        notifying = False,
+        notifying = True,
         flags = ['read', 'write', 'notify'],
         read_callback = read_value,
         write_callback = write_value,
