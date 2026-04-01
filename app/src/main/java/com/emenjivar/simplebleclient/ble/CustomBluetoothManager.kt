@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.ScanCallback
@@ -33,8 +34,8 @@ class CustomBluetoothManager(private val context: Context) {
     private val _isConnecting = MutableStateFlow(false)
     val isConnecting = _isConnecting.asStateFlow()
 
-    private val _readValue = MutableStateFlow<String?>(null)
-    val readValue = _readValue.asStateFlow()
+    private val _ledState = MutableStateFlow<LEDCommand>(LEDCommand.OFF)
+    val ledState = _ledState.asStateFlow()
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
@@ -89,6 +90,7 @@ class CustomBluetoothManager(private val context: Context) {
                 BluetoothProfile.STATE_CONNECTED -> {
                     Log.wtf("CustomBluetoothManager", "connected to ${gatt?.device?.address}")
                     _connectedDevice.update { gatt?.device}
+                    gatt?.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
                     gatt?.discoverServices()
                     _isConnecting.update { false }
                 }
@@ -105,6 +107,25 @@ class CustomBluetoothManager(private val context: Context) {
             }
         }
 
+        override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                val characteristic = gatt
+                    ?.getService(serviceUUID)
+                    ?.getCharacteristic(characteristicUUID) ?: return
+
+                // Enable notifications locally on android
+                gatt.setCharacteristicNotification(characteristic, true)
+
+                // Hardcoded UUID for receiving notifications
+                val descriptor = characteristic.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"))
+
+                gatt.writeDescriptor(
+                    descriptor,
+                    BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                )
+            }
+        }
+
         override fun onCharacteristicRead(
             gatt: BluetoothGatt,
             characteristic: BluetoothGattCharacteristic,
@@ -112,9 +133,9 @@ class CustomBluetoothManager(private val context: Context) {
             status: Int
         ) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                val value = value.toString(Charsets.UTF_8)
-                _readValue.update { value }
-                Log.wtf("CustomBluetoothManager", "*read value: $value")
+                LEDCommand.fromValue(value[0])?.let { safeCommand ->
+                    _ledState.update { safeCommand }
+                }
             }
         }
 
@@ -127,6 +148,42 @@ class CustomBluetoothManager(private val context: Context) {
                 val value = characteristic?.value?.toString(Charsets.UTF_8)
                 Log.wtf("CustomBluetoothManager", "read value: $value")
             }
+        }
+
+        override fun onCharacteristicChanged(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            value: ByteArray
+        ) {
+            Log.wtf("charlietest", "value changed: $value")
+            val command = LEDCommand.fromValue(value[0])
+            command?.let { safeCommand ->
+                _ledState.update { safeCommand }
+            }
+        }
+
+        override fun onDescriptorWrite(
+            gatt: BluetoothGatt?,
+            descriptor: BluetoothGattDescriptor?,
+            status: Int
+        ) {
+            Log.d("CustomBluetoothManager", "onDescriptorWrite status=$status")
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                val characteristic = gatt
+                    ?.getService(serviceUUID)
+                    ?.getCharacteristic(characteristicUUID) ?: return
+
+                // Now safe — descriptor is written, read initial value
+                gatt.readCharacteristic(characteristic)
+            }
+        }
+
+        override fun onCharacteristicWrite(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            status: Int
+        ) {
+            Log.d("CustomBluetoothManager", "onCharacteristicWrite status=$status")
         }
     }
 
@@ -141,25 +198,23 @@ class CustomBluetoothManager(private val context: Context) {
         bluetoothGatt?.disconnect()
     }
 
-    private val SERVICE_UUID = UUID.fromString("290edf15-b540-4e83-83cf-ba647bf4df20")
-    private val CHARACTERISTIC_UUID = UUID.fromString("290edf15-b540-4e83-83cf-ba647bf4df21")
-
     fun readCharacteristic() {
         val characteristic = bluetoothGatt
-            ?.getService(SERVICE_UUID)
-            ?.getCharacteristic(CHARACTERISTIC_UUID) ?: throw CharacteristicNotFoundException()
+            ?.getService(serviceUUID)
+            ?.getCharacteristic(characteristicUUID) ?: throw CharacteristicNotFoundException()
 
         bluetoothGatt?.readCharacteristic(characteristic)
     }
 
-    fun writeCharacteristic(value: String) {
+    fun writeCharacteristic(command: LEDCommand) {
+        Log.wtf("CustomBluetoothManager", "trying to write: $command")
         val characteristic = bluetoothGatt
-            ?.getService(SERVICE_UUID)
-            ?.getCharacteristic(CHARACTERISTIC_UUID) ?: throw CharacteristicNotFoundException()
+            ?.getService(serviceUUID)
+            ?.getCharacteristic(characteristicUUID) ?: throw CharacteristicNotFoundException()
 
         bluetoothGatt?.writeCharacteristic(
             characteristic,
-            value.toByteArray(Charsets.UTF_8),
+            byteArrayOf(command.value),
             BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
         )
     }
