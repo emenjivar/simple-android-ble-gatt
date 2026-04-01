@@ -20,7 +20,7 @@ pip install bluezero
 ## Running the server
 ```bash
 source ~/venv_bluetooth/bin/activate
-python 3 gatt_server.py
+python3 gatt_server.py
 ```
 
 > To exit the virtual environment, run `deactivate`
