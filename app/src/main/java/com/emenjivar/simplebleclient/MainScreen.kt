@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.emenjivar.simplebleclient.ble.BluetoothDisabledException
 import com.emenjivar.simplebleclient.ble.CustomBluetoothManager
+import com.emenjivar.simplebleclient.ble.LEDCommand
 import com.emenjivar.simplebleclient.permission.PermissionDeniedDialog
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -55,7 +56,7 @@ fun MainScreen(
     val devices by bluetoothManager.pairedDevices.collectAsStateWithLifecycle()
     val connectedDevice by bluetoothManager.connectedDevice.collectAsStateWithLifecycle()
     val isConnecting by bluetoothManager.isConnecting.collectAsStateWithLifecycle()
-    val value by bluetoothManager.readValue.collectAsStateWithLifecycle()
+    val ledState by bluetoothManager.ledState.collectAsStateWithLifecycle()
     val permissionState = rememberMultiplePermissionsState(permissions = permissions)
     val openPermissionDeniedDialog = remember { mutableStateOf(false) }
     var isScanning by remember { mutableStateOf(false) }
@@ -118,9 +119,7 @@ fun MainScreen(
                         Text(
                             text = "device: ${device.name}, address: ${device.address}"
                         )
-                        AnimatedVisibility(value != null) {
-                            Text(text = "read value: $value")
-                        }
+                        Text(text = "led state: $ledState")
                     }
 
                     Column {
@@ -148,8 +147,15 @@ fun MainScreen(
                                 Button(onClick = { bluetoothManager.readCharacteristic() }) {
                                     Text(text = "Read characteristic")
                                 }
-                                Button(onClick = { bluetoothManager.writeCharacteristic("Hello ${System.currentTimeMillis()}")}) {
-                                    Text(text = "Write characteristic")
+                                Button(onClick = {
+                                    val state = when (ledState) {
+                                        LEDCommand.ON -> LEDCommand.OFF
+                                        else -> LEDCommand.ON
+                                    }
+                                    bluetoothManager.writeCharacteristic(state)
+                                }
+                                ) {
+                                    Text(text = if(ledState == LEDCommand.ON) "Turn OFF" else "Turn ON")
                                 }
                             }
                         }

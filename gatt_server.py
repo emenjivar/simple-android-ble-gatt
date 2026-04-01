@@ -1,22 +1,53 @@
 from bluezero import adapter, peripheral
+from gpiozero import LED
 
-## UUIS
-SERVICE_UUID = '290edf15-b540-4e83-83cf-ba647bf4df20'
+## UUIDS
+SERVICE_UUID        = '290edf15-b540-4e83-83cf-ba647bf4df20'
 CHARACTERISTIC_UUID = '290edf15-b540-4e83-83cf-ba647bf4df21'
 
 # Value to expose
-VALUE = b'Hello BLE!'
+LED_OFF = 0x00
+LED_ON  = 0x01
+LED_STATE = [LED_OFF]
+
+# IO
+led = LED(17)
+
+char_obj = None  # Direct reference to the characteristic
 
 def read_value():
-    print("[READ] Characteristic was read")
-    return VALUE
+    print(f"[READ] Characteristic was read: {LED_STATE}")
+    return LED_STATE
+
+def notify_callback(notifying, characteristic):
+    if notifying:
+        print("[NOTIFY] Client subscribed to notifications")
+    else:
+        print("[NOTIFY] Client unsubscribed from notifications")
 
 def write_value(value, options):
-    global VALUE
-    VALUE = bytes(value)
-    print(f"[WRITE] Characteristic was written: {VALUE}")
+    global LED_STATE
+    byte_val = bytes(value)
+    command = byte_val[0]
+
+    if command not in (LED_OFF, LED_ON):
+        raise ValueError(f"[ERROR] Invalid value: {hex(command)}.")
+
+    LED_STATE = [command]
+    print(f"[WRITE] Characteristic was written: {LED_STATE}")
+
+    if command == LED_ON:
+        led.on()
+    elif command == LED_OFF:
+        led.off()
+
+    # Emit notification
+    if char_obj and char_obj.is_notifying:
+        char_obj.set_value(LED_STATE)
 
 def main():
+    global char_obj
+
     dongle = list(adapter.Adapter.available())[0]
     adapter_address = dongle.address
     print(f"Using adapter: {adapter_address}")
@@ -35,19 +66,21 @@ def main():
         srv_id = 1,
         chr_id = 1,
         uuid = CHARACTERISTIC_UUID,
-        value = [],
+        value = [LED_OFF],
         notifying = False,
-        flags = ['read', 'write'],
+        flags = ['read', 'write', 'notify'],  # all three together
         read_callback = read_value,
         write_callback = write_value,
-        notify_callback = None
+        notify_callback = notify_callback
     )
+
+    char_obj = app.characteristics[0]
 
     print("GATT server starting")
     print(f"Local name: Charlie gatt server")
     print(f"Service UUID: {SERVICE_UUID}")
-    print(f"Char UUID: {CHARACTERISTIC_UUID}")
-    print(f"Value: {VALUE}")
+    print(f"Char UUID:    {CHARACTERISTIC_UUID}")
+    print(f"Value: {LED_STATE}")
     print("Advertising - waiting for connections (Ctrl+c to stop)")
     app.publish()
 
