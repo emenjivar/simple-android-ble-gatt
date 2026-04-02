@@ -20,7 +20,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.util.UUID
 
-class CustomBluetoothManager(private val context: Context) {
+class CustomBluetoothManager(
+    private val context: Context,
+    private val bleNotifications: BleNotifications
+) {
     private var bluetoothGatt: BluetoothGatt? = null
     private val bluetoothManager: BluetoothManager = context.getSystemService(BluetoothManager::class.java)
     private val bluetoothAdapter: BluetoothAdapter? = bluetoothManager.adapter
@@ -33,9 +36,6 @@ class CustomBluetoothManager(private val context: Context) {
 
     private val _isConnecting = MutableStateFlow(false)
     val isConnecting = _isConnecting.asStateFlow()
-
-    private val _ledState = MutableStateFlow<LEDCommand>(LEDCommand.OFF)
-    val ledState = _ledState.asStateFlow()
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
@@ -133,9 +133,7 @@ class CustomBluetoothManager(private val context: Context) {
             status: Int
         ) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                LEDCommand.fromValue(value[0])?.let { safeCommand ->
-                    _ledState.update { safeCommand }
-                }
+                bleNotifications.emit(WriteLed, value)
             }
         }
 
@@ -145,8 +143,13 @@ class CustomBluetoothManager(private val context: Context) {
             status: Int
         ) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                val value = characteristic?.value?.toString(Charsets.UTF_8)
-                Log.wtf("CustomBluetoothManager", "read value: $value")
+                val value = characteristic?.value
+
+                if (value != null) {
+                    bleNotifications.emit(WriteLed, value)
+                } else {
+                    // Handle error here
+                }
             }
         }
 
@@ -156,10 +159,7 @@ class CustomBluetoothManager(private val context: Context) {
             value: ByteArray
         ) {
             Log.wtf("charlietest", "value changed: $value")
-            val command = LEDCommand.fromValue(value[0])
-            command?.let { safeCommand ->
-                _ledState.update { safeCommand }
-            }
+            bleNotifications.emit(WriteLed, value)
         }
 
         override fun onDescriptorWrite(
@@ -168,14 +168,6 @@ class CustomBluetoothManager(private val context: Context) {
             status: Int
         ) {
             Log.d("CustomBluetoothManager", "onDescriptorWrite status=$status")
-//            if (status == BluetoothGatt.GATT_SUCCESS) {
-//                val characteristic = gatt
-//                    ?.getService(serviceUUID)
-//                    ?.getCharacteristic(characteristicUUID) ?: return
-//
-//                // Now safe — descriptor is written, read initial value
-//                gatt.readCharacteristic(characteristic)
-//            }
         }
 
         override fun onCharacteristicWrite(

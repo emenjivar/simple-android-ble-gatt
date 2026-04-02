@@ -6,22 +6,28 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import com.emenjivar.simplebleclient.ble.BleNotificationsImp
 import com.emenjivar.simplebleclient.ble.CustomBluetoothManager
 import com.emenjivar.simplebleclient.ui.theme.SimpleBLEClientTheme
 
 class MainActivity : ComponentActivity() {
     private lateinit var bluetoothManager: CustomBluetoothManager
+    private val bleNotifications = BleNotificationsImp()
 
     @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        bluetoothManager = CustomBluetoothManager(context = application)
+        bluetoothManager = CustomBluetoothManager(
+            context = application,
+            bleNotifications = bleNotifications
+        )
 
         enableEdgeToEdge()
         setContent {
             SimpleBLEClientTheme {
                 MainScreen(
                     bluetoothManager = bluetoothManager,
+                    bleNotifications = bleNotifications,
                     onRequestBluetoothEnable = { intent ->
                         enableBluetoothLaunched.launch(intent)
                     }

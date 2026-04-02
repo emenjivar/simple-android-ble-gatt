@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.emenjivar.simplebleclient.ble.BleNotifications
 import com.emenjivar.simplebleclient.ble.BluetoothDisabledException
 import com.emenjivar.simplebleclient.ble.CustomBluetoothManager
 import com.emenjivar.simplebleclient.ble.LEDCommand
@@ -51,13 +52,14 @@ private val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
 @Stable
 fun MainScreen(
     bluetoothManager: CustomBluetoothManager,
+    bleNotifications: BleNotifications,
     onRequestBluetoothEnable: (Intent) -> Unit
 ) {
     val context = LocalContext.current
     val devices by bluetoothManager.pairedDevices.collectAsStateWithLifecycle()
     val connectedDevice by bluetoothManager.connectedDevice.collectAsStateWithLifecycle()
     val isConnecting by bluetoothManager.isConnecting.collectAsStateWithLifecycle()
-    val ledState by bluetoothManager.ledState.collectAsStateWithLifecycle()
+    val ledState by bleNotifications.observe(WriteLed).collectAsStateWithLifecycle(LEDCommand.OFF)
     val permissionState = rememberMultiplePermissionsState(permissions = permissions)
     val openPermissionDeniedDialog = remember { mutableStateOf(false) }
     var isScanning by remember { mutableStateOf(false) }
