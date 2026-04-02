@@ -8,6 +8,7 @@ import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.util.Log
+import com.emenjivar.simplebleclient.ble.commands.ReadLedStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -58,8 +59,8 @@ class CustomBluetoothManager(
         override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 val characteristic = gatt
-                    ?.getService(serviceUUID)
-                    ?.getCharacteristic(characteristicUUID) ?: return
+                    ?.getService(primaryServiceUUID)
+                    ?.getCharacteristic(ledCharacteristicUUID) ?: return
 
                 // Enable notifications locally on android
                 gatt.setCharacteristicNotification(characteristic, true)
@@ -82,7 +83,7 @@ class CustomBluetoothManager(
             status: Int
         ) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                bleNotifications.emit(ReadLed, value)
+                bleNotifications.emit(ReadLedStatus, value)
             }
         }
 
@@ -95,7 +96,7 @@ class CustomBluetoothManager(
                 val value = characteristic?.value
 
                 if (value != null) {
-                    bleNotifications.emit(ReadLed, value)
+                    bleNotifications.emit(ReadLedStatus, value)
                 } else {
                     // Handle error here
                 }
@@ -108,7 +109,7 @@ class CustomBluetoothManager(
             value: ByteArray
         ) {
             Log.wtf("charlietest", "value changed: $value")
-            bleNotifications.emit(ReadLed, value)
+            bleNotifications.emit(ReadLedStatus, value)
         }
 
         override fun onDescriptorWrite(

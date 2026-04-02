@@ -30,9 +30,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.emenjivar.simplebleclient.ble.BleNotifications
 import com.emenjivar.simplebleclient.ble.BluetoothDisabledException
 import com.emenjivar.simplebleclient.ble.CustomBluetoothManager
-import com.emenjivar.simplebleclient.ble.LEDCommand
-import com.emenjivar.simplebleclient.ble.ReadLed
-import com.emenjivar.simplebleclient.ble.WriteLed
+import com.emenjivar.simplebleclient.ble.commands.LEDCommand
+import com.emenjivar.simplebleclient.ble.commands.ReadLedStatus
+import com.emenjivar.simplebleclient.ble.commands.WriteLedStatus
 import com.emenjivar.simplebleclient.permission.PermissionDeniedDialog
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -60,7 +60,7 @@ fun MainScreen(
     val devices by bluetoothManager.pairedDevices.collectAsStateWithLifecycle()
     val connectedDevice by bluetoothManager.connectedDevice.collectAsStateWithLifecycle()
     val isConnecting by bluetoothManager.isConnecting.collectAsStateWithLifecycle()
-    val ledState by bleNotifications.observe(ReadLed).collectAsStateWithLifecycle(LEDCommand.OFF)
+    val ledState by bleNotifications.observe(ReadLedStatus).collectAsStateWithLifecycle(LEDCommand.OFF)
     val permissionState = rememberMultiplePermissionsState(permissions = permissions)
     val openPermissionDeniedDialog = remember { mutableStateOf(false) }
     var isScanning by remember { mutableStateOf(false) }
@@ -149,7 +149,7 @@ fun MainScreen(
                         AnimatedVisibility(isConnected) {
                             Column {
                                 Button(onClick = {
-                                    bluetoothManager.readCharacteristic(ReadLed)
+                                    bluetoothManager.readCharacteristic(ReadLedStatus)
                                 }) {
                                     Text(text = "Read characteristic")
                                 }
@@ -158,7 +158,7 @@ fun MainScreen(
                                         LEDCommand.ON -> LEDCommand.OFF
                                         else -> LEDCommand.ON
                                     }
-                                    bluetoothManager.writeCharacteristic(WriteLed, state)
+                                    bluetoothManager.writeCharacteristic(WriteLedStatus, state)
                                 }
                                 ) {
                                     Text(text = if(ledState == LEDCommand.ON) "Turn OFF" else "Turn ON")
