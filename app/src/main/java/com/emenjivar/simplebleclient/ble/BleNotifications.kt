@@ -8,8 +8,8 @@ import kotlinx.coroutines.flow.map
 import java.util.UUID
 
 interface BleNotifications {
-    fun <T> emit(command: BleCommand<T>, value: ByteArray)
-    fun <T> observe(command: BleCommand<T>): Flow<T>
+    fun <T> emit(command: BleCommand.Read<T>, value: ByteArray)
+    fun <T> observe(command: BleCommand.Read<T>): Flow<T>
 }
 
 class BleNotificationsImp : BleNotifications {
@@ -19,11 +19,11 @@ class BleNotificationsImp : BleNotifications {
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    override fun <T> emit(command: BleCommand<T>, value: ByteArray) {
+    override fun <T> emit(command: BleCommand.Read<T>, value: ByteArray) {
         _updates.tryEmit(command.characteristic to value)
     }
 
-    override fun <T> observe(command: BleCommand<T>): Flow<T> =
+    override fun <T> observe(command: BleCommand.Read<T>): Flow<T> =
         _updates
             .filter { (uuid, _) -> uuid == command.characteristic }
             .map { (_, bytes) -> command.decode(bytes) }

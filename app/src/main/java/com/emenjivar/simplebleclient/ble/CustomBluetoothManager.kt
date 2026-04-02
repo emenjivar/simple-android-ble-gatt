@@ -1,19 +1,12 @@
 package com.emenjivar.simplebleclient.ble
 
-import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
-import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
-import android.bluetooth.le.ScanCallback
-import android.bluetooth.le.ScanFilter
-import android.bluetooth.le.ScanResult
-import android.bluetooth.le.ScanSettings
 import android.content.Context
-import android.os.ParcelUuid
 import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,14 +15,10 @@ import java.util.UUID
 
 class CustomBluetoothManager(
     private val context: Context,
-    private val bleNotifications: BleNotifications
-) {
+    private val bleNotifications: BleNotifications,
+    private val scanner: BleScanner = BleScannerImp(context)
+) : BleScanner by scanner {
     private var bluetoothGatt: BluetoothGatt? = null
-    private val bluetoothManager: BluetoothManager = context.getSystemService(BluetoothManager::class.java)
-    private val bluetoothAdapter: BluetoothAdapter? = bluetoothManager.adapter
-
-    private val _pairedDevices = MutableStateFlow<List<BluetoothDevice>>(emptyList())
-    val pairedDevices = _pairedDevices.asStateFlow()
 
     private val _connectedDevice = MutableStateFlow<BluetoothDevice?>(null)
     val connectedDevice = _connectedDevice.asStateFlow()
@@ -37,70 +26,29 @@ class CustomBluetoothManager(
     private val _isConnecting = MutableStateFlow(false)
     val isConnecting = _isConnecting.asStateFlow()
 
-    private val scanCallback = object : ScanCallback() {
-        override fun onScanResult(callbackType: Int, result: ScanResult?) {
-            super.onScanResult(callbackType, result)
-
-            if (result?.device != null) {
-                _pairedDevices.update { current ->
-                    val exist = current.any { it.address == result.device.address }
-                    if (exist) {
-                        current.map { if (it.address == result.device.address) result.device else it }
-                    } else {
-                        current + result.device
-                    }
-                }
-            }
-        }
-
-        override fun onScanFailed(errorCode: Int) {
-            super.onScanFailed(errorCode)
-            Log.wtf("MainActivity", "Scan faiiled: $errorCode")
-        }
-    }
-
-    fun startScan() {
-        if (bluetoothAdapter == null) {
-            throw Exception("Bluetooth not supported")
-        }
-
-        if (!bluetoothAdapter.isEnabled) {
-            // Bluetooth was manually disabled, prompt the user to enable it
-            throw BluetoothDisabledException()
-        }
-
-        val filter = ScanFilter.Builder()
-            .setServiceUuid(ParcelUuid.fromString("290edf15-b540-4e83-83cf-ba647bf4df20"))
-            .build()
-        val setting = ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-            .build()
-        _pairedDevices.update { emptyList() }
-        bluetoothAdapter.bluetoothLeScanner?.startScan(listOf(filter), setting, scanCallback)
-    }
-
-    fun stopScan() {
-        bluetoothAdapter?.bluetoothLeScanner?.stopScan(scanCallback)
-    }
-
     private val gattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
             Log.d("BLE", "onConnectionStateChange status=$status newState=$newState")
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
                     Log.wtf("CustomBluetoothManager", "connected to ${gatt?.device?.address}")
-                    _connectedDevice.update { gatt?.device}
+                    _connectedDevice.update { gatt?.device }
                     gatt?.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
                     gatt?.discoverServices()
                     _isConnecting.update { false }
                 }
+
                 BluetoothProfile.STATE_DISCONNECTED -> {
-                    Log.wtf("CustomBluetoothManager", "disconnected to ${gatt?.device?.address}, status: $status")
+                    Log.wtf(
+                        "CustomBluetoothManager",
+                        "disconnected to ${gatt?.device?.address}, status: $status"
+                    )
                     bluetoothGatt?.close()
                     _connectedDevice.update { null }
                     bluetoothGatt = null
                     _isConnecting.update { false }
                 }
+
                 BluetoothProfile.STATE_CONNECTING, BluetoothProfile.STATE_DISCONNECTING -> {
                     _isConnecting.update { true }
                 }
@@ -117,7 +65,8 @@ class CustomBluetoothManager(
                 gatt.setCharacteristicNotification(characteristic, true)
 
                 // Hardcoded UUID for receiving notifications
-                val descriptor = characteristic.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"))
+                val descriptor =
+                    characteristic.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"))
 
                 gatt.writeDescriptor(
                     descriptor,
@@ -133,7 +82,7 @@ class CustomBluetoothManager(
             status: Int
         ) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                bleNotifications.emit(WriteLed, value)
+                bleNotifications.emit(ReadLed, value)
             }
         }
 
@@ -146,7 +95,7 @@ class CustomBluetoothManager(
                 val value = characteristic?.value
 
                 if (value != null) {
-                    bleNotifications.emit(WriteLed, value)
+                    bleNotifications.emit(ReadLed, value)
                 } else {
                     // Handle error here
                 }
@@ -159,7 +108,7 @@ class CustomBluetoothManager(
             value: ByteArray
         ) {
             Log.wtf("charlietest", "value changed: $value")
-            bleNotifications.emit(WriteLed, value)
+            bleNotifications.emit(ReadLed, value)
         }
 
         override fun onDescriptorWrite(
@@ -182,7 +131,8 @@ class CustomBluetoothManager(
     fun connect(device: BluetoothDevice) {
         _isConnecting.update { true }
         stopScan()
-        bluetoothGatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+        bluetoothGatt =
+            device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
     }
 
     fun disconnect() {
@@ -191,12 +141,12 @@ class CustomBluetoothManager(
     }
 
 
-    fun <T> readCharacteristic(command: BleCommand<T>) {
+    fun <T> readCharacteristic(command: BleCommand.Read<T>) {
         val characteristic = command.getCharacteristic() ?: throw CharacteristicNotFoundException()
         bluetoothGatt?.readCharacteristic(characteristic)
     }
 
-    fun <T> writeCharacteristic(command: BleCommand<T>, value: T) {
+    fun <T> writeCharacteristic(command: BleCommand.Write<T>, value: T) {
         val characteristic = command.getCharacteristic() ?: throw CharacteristicNotFoundException()
         bluetoothGatt?.writeCharacteristic(
             characteristic,

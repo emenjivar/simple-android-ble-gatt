@@ -31,6 +31,7 @@ import com.emenjivar.simplebleclient.ble.BleNotifications
 import com.emenjivar.simplebleclient.ble.BluetoothDisabledException
 import com.emenjivar.simplebleclient.ble.CustomBluetoothManager
 import com.emenjivar.simplebleclient.ble.LEDCommand
+import com.emenjivar.simplebleclient.ble.ReadLed
 import com.emenjivar.simplebleclient.ble.WriteLed
 import com.emenjivar.simplebleclient.permission.PermissionDeniedDialog
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -59,7 +60,7 @@ fun MainScreen(
     val devices by bluetoothManager.pairedDevices.collectAsStateWithLifecycle()
     val connectedDevice by bluetoothManager.connectedDevice.collectAsStateWithLifecycle()
     val isConnecting by bluetoothManager.isConnecting.collectAsStateWithLifecycle()
-    val ledState by bleNotifications.observe(WriteLed).collectAsStateWithLifecycle(LEDCommand.OFF)
+    val ledState by bleNotifications.observe(ReadLed).collectAsStateWithLifecycle(LEDCommand.OFF)
     val permissionState = rememberMultiplePermissionsState(permissions = permissions)
     val openPermissionDeniedDialog = remember { mutableStateOf(false) }
     var isScanning by remember { mutableStateOf(false) }
@@ -148,7 +149,7 @@ fun MainScreen(
                         AnimatedVisibility(isConnected) {
                             Column {
                                 Button(onClick = {
-                                    bluetoothManager.readCharacteristic(WriteLed)
+                                    bluetoothManager.readCharacteristic(ReadLed)
                                 }) {
                                     Text(text = "Read characteristic")
                                 }
