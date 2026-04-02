@@ -13,8 +13,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.util.UUID
+import javax.inject.Inject
 
-class CustomBluetoothManager(
+class CustomBluetoothManager @Inject constructor(
     private val context: Context,
     private val bleNotifications: BleNotifications,
     private val scanner: BleScanner = BleScannerImp(context)

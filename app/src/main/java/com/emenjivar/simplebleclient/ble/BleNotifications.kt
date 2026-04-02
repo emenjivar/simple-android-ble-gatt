@@ -6,13 +6,14 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import java.util.UUID
+import javax.inject.Inject
 
 interface BleNotifications {
     fun <T> emit(command: BleCommand.Read<T>, value: ByteArray)
     fun <T> observe(command: BleCommand.Read<T>): Flow<T>
 }
 
-class BleNotificationsImp : BleNotifications {
+class BleNotificationsImp @Inject constructor() : BleNotifications {
     private val _updates = MutableSharedFlow<Pair<UUID, ByteArray>>(
         replay = 1,
         extraBufferCapacity = 10,
