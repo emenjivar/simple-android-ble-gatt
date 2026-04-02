@@ -168,14 +168,14 @@ class CustomBluetoothManager(private val context: Context) {
             status: Int
         ) {
             Log.d("CustomBluetoothManager", "onDescriptorWrite status=$status")
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                val characteristic = gatt
-                    ?.getService(serviceUUID)
-                    ?.getCharacteristic(characteristicUUID) ?: return
-
-                // Now safe — descriptor is written, read initial value
-                gatt.readCharacteristic(characteristic)
-            }
+//            if (status == BluetoothGatt.GATT_SUCCESS) {
+//                val characteristic = gatt
+//                    ?.getService(serviceUUID)
+//                    ?.getCharacteristic(characteristicUUID) ?: return
+//
+//                // Now safe — descriptor is written, read initial value
+//                gatt.readCharacteristic(characteristic)
+//            }
         }
 
         override fun onCharacteristicWrite(
@@ -198,24 +198,26 @@ class CustomBluetoothManager(private val context: Context) {
         bluetoothGatt?.disconnect()
     }
 
-    fun readCharacteristic() {
-        val characteristic = bluetoothGatt
-            ?.getService(serviceUUID)
-            ?.getCharacteristic(characteristicUUID) ?: throw CharacteristicNotFoundException()
 
+    fun <T> readCharacteristic(command: BleCommand<T>) {
+        val characteristic = command.getCharacteristic() ?: throw CharacteristicNotFoundException()
         bluetoothGatt?.readCharacteristic(characteristic)
     }
 
-    fun writeCharacteristic(command: LEDCommand) {
-        Log.wtf("CustomBluetoothManager", "trying to write: $command")
-        val characteristic = bluetoothGatt
-            ?.getService(serviceUUID)
-            ?.getCharacteristic(characteristicUUID) ?: throw CharacteristicNotFoundException()
-
+    fun <T> writeCharacteristic(command: BleCommand<T>, value: T) {
+        val characteristic = command.getCharacteristic() ?: throw CharacteristicNotFoundException()
         bluetoothGatt?.writeCharacteristic(
             characteristic,
-            byteArrayOf(command.value),
+            command.encode(value),
             BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
         )
+    }
+
+    fun <T> BleCommand<T>.getCharacteristic(): BluetoothGattCharacteristic? {
+        val characteristic = bluetoothGatt
+            ?.getService(service)
+            ?.getCharacteristic(characteristic)
+
+        return characteristic
     }
 }

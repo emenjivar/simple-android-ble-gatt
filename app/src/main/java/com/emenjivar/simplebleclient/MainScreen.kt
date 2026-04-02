@@ -30,6 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.emenjivar.simplebleclient.ble.BluetoothDisabledException
 import com.emenjivar.simplebleclient.ble.CustomBluetoothManager
 import com.emenjivar.simplebleclient.ble.LEDCommand
+import com.emenjivar.simplebleclient.ble.WriteLed
 import com.emenjivar.simplebleclient.permission.PermissionDeniedDialog
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -144,7 +145,9 @@ fun MainScreen(
 
                         AnimatedVisibility(isConnected) {
                             Column {
-                                Button(onClick = { bluetoothManager.readCharacteristic() }) {
+                                Button(onClick = {
+                                    bluetoothManager.readCharacteristic(WriteLed)
+                                }) {
                                     Text(text = "Read characteristic")
                                 }
                                 Button(onClick = {
@@ -152,7 +155,7 @@ fun MainScreen(
                                         LEDCommand.ON -> LEDCommand.OFF
                                         else -> LEDCommand.ON
                                     }
-                                    bluetoothManager.writeCharacteristic(state)
+                                    bluetoothManager.writeCharacteristic(WriteLed, state)
                                 }
                                 ) {
                                     Text(text = if(ledState == LEDCommand.ON) "Turn OFF" else "Turn ON")
