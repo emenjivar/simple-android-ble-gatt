@@ -9,12 +9,11 @@ import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.os.Build
-import android.util.Log
 import com.emenjivar.simplebleclient.ble.commands.ReadLedStatus
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import java.util.UUID
 import javax.inject.Inject
 
 @SuppressLint("MissingPermission")
@@ -24,38 +23,36 @@ class CustomBluetoothManager @Inject constructor(
     private val scanner: BleScanner = BleScannerImp(context)
 ) : BleScanner by scanner {
     private var bluetoothGatt: BluetoothGatt? = null
-
-    private val _connectedDevice = MutableStateFlow<BluetoothDevice?>(null)
-    val connectedDevice = _connectedDevice.asStateFlow()
-
-    private val _isConnecting = MutableStateFlow(false)
-    val isConnecting = _isConnecting.asStateFlow()
+    private val _connectionState = MutableStateFlow<BleConnectionState>(BleConnectionState.Disconnected)
+    val connectionState: StateFlow<BleConnectionState> = _connectionState.asStateFlow()
 
     private val gattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
-            Log.d("BLE", "onConnectionStateChange status=$status newState=$newState")
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
-                    Log.wtf("CustomBluetoothManager", "connected to ${gatt?.device?.address}")
-                    _connectedDevice.update { gatt?.device }
+                    val connectedDevice = gatt?.device
+                    if (connectedDevice != null) {
+                        _connectionState.update { BleConnectionState.Connected(connectedDevice) }
+                    } else {
+                        _connectionState.update { BleConnectionState.Failed }
+                    }
+
                     gatt?.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
                     gatt?.discoverServices()
-                    _isConnecting.update { false }
                 }
 
                 BluetoothProfile.STATE_DISCONNECTED -> {
-                    Log.wtf(
-                        "CustomBluetoothManager",
-                        "disconnected to ${gatt?.device?.address}, status: $status"
-                    )
                     bluetoothGatt?.close()
-                    _connectedDevice.update { null }
+                    _connectionState.update { BleConnectionState.Disconnected }
                     bluetoothGatt = null
-                    _isConnecting.update { false }
                 }
 
-                BluetoothProfile.STATE_CONNECTING, BluetoothProfile.STATE_DISCONNECTING -> {
-                    _isConnecting.update { true }
+                BluetoothProfile.STATE_CONNECTING -> {
+                    _connectionState.update { BleConnectionState.Connecting }
+                }
+
+                BluetoothProfile.STATE_DISCONNECTING -> {
+                    _connectionState.update { BleConnectionState.Disconnecting }
                 }
             }
         }
@@ -116,7 +113,6 @@ class CustomBluetoothManager @Inject constructor(
             characteristic: BluetoothGattCharacteristic,
             value: ByteArray
         ) {
-            Log.wtf("charlietest", "value changed: $value")
             bleNotifications.emit(ReadLedStatus, value)
         }
 
@@ -125,7 +121,7 @@ class CustomBluetoothManager @Inject constructor(
             descriptor: BluetoothGattDescriptor?,
             status: Int
         ) {
-            Log.d("CustomBluetoothManager", "onDescriptorWrite status=$status")
+            super.onDescriptorWrite(gatt, descriptor, status)
         }
 
         override fun onCharacteristicWrite(
@@ -133,19 +129,19 @@ class CustomBluetoothManager @Inject constructor(
             characteristic: BluetoothGattCharacteristic,
             status: Int
         ) {
-            Log.d("CustomBluetoothManager", "onCharacteristicWrite status=$status")
+            super.onCharacteristicWrite(gatt, characteristic, status)
         }
     }
 
     fun connect(device: BluetoothDevice) {
-        _isConnecting.update { true }
+        _connectionState.update { BleConnectionState.Connecting }
         stopScan()
+        bluetoothGatt?.close()
         bluetoothGatt =
             device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
     }
 
     fun disconnect() {
-        _isConnecting.update { true }
         bluetoothGatt?.disconnect()
     }
 

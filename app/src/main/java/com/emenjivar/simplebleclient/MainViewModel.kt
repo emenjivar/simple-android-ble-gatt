@@ -18,9 +18,9 @@ class MainViewModel @Inject constructor(
     private val customBluetoothManager: CustomBluetoothManager,
     bleNotifications: BleNotifications
 ) : ViewModel() {
-    val pairedDevices = customBluetoothManager.pairedDevices
-    val connectedDevice = customBluetoothManager.connectedDevice
-    val isConnecting = customBluetoothManager.isConnecting
+    val pairedDevices = customBluetoothManager.scannedDevices
+    val connectionState = customBluetoothManager.connectionState
+
     val ledState = bleNotifications.observe(ReadLedStatus)
         .stateIn(
             scope = viewModelScope,

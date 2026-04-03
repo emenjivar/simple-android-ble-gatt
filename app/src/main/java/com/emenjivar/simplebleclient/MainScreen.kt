@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.emenjivar.simplebleclient.ble.BleConnectionState
 import com.emenjivar.simplebleclient.ble.BluetoothDisabledException
 import com.emenjivar.simplebleclient.ble.commands.LEDCommand
 import com.emenjivar.simplebleclient.permission.PermissionDeniedDialog
@@ -53,8 +54,7 @@ fun MainScreen(
 ) {
     val context = LocalContext.current
     val devices by viewModel.pairedDevices.collectAsStateWithLifecycle()
-    val connectedDevice by viewModel.connectedDevice.collectAsStateWithLifecycle()
-    val isConnecting by viewModel.isConnecting.collectAsStateWithLifecycle()
+    val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
     val ledState by viewModel.ledState.collectAsStateWithLifecycle()
     val permissionState = rememberMultiplePermissionsState(permissions = permissions)
     val openPermissionDeniedDialog = remember { mutableStateOf(false) }
@@ -110,7 +110,6 @@ fun MainScreen(
             }
 
             items(devices.toList()) { device ->
-                val isConnected = connectedDevice?.address == device.address
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -123,9 +122,9 @@ fun MainScreen(
 
                     Column {
                         Button(
-                            enabled = !isConnecting,
+                            enabled = connectionState !is BleConnectionState.Connecting,
                             onClick = {
-                                if (isConnected) {
+                                if (connectionState.isConnected()) {
                                     viewModel.disconnect()
                                 } else {
                                     viewModel.connect(device)
@@ -133,7 +132,7 @@ fun MainScreen(
                             }
                         ) {
                             Text(
-                                text = if (isConnected) {
+                                text = if (connectionState.isConnected()) {
                                     "disconnect"
                                 } else {
                                     "Connect"
@@ -141,7 +140,7 @@ fun MainScreen(
                             )
                         }
 
-                        AnimatedVisibility(isConnected) {
+                        AnimatedVisibility(connectionState.isConnected()) {
                             Column {
                                 Button(onClick = {
                                     val state = when (ledState) {
