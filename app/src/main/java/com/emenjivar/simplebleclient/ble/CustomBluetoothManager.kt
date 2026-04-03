@@ -1,5 +1,6 @@
 package com.emenjivar.simplebleclient.ble
 
+import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
@@ -7,6 +8,7 @@ import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothProfile
 import android.content.Context
+import android.os.Build
 import android.util.Log
 import com.emenjivar.simplebleclient.ble.commands.ReadLedStatus
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.update
 import java.util.UUID
 import javax.inject.Inject
 
+@SuppressLint("MissingPermission")
 class CustomBluetoothManager @Inject constructor(
     private val context: Context,
     private val bleNotifications: BleNotifications,
@@ -67,13 +70,17 @@ class CustomBluetoothManager @Inject constructor(
                 gatt.setCharacteristicNotification(characteristic, true)
 
                 // Hardcoded UUID for receiving notifications
-                val descriptor =
-                    characteristic.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"))
+                val descriptor = characteristic.getDescriptor(clientCharacteristicConfigUUID)
 
-                gatt.writeDescriptor(
-                    descriptor,
-                    BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-                )
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    gatt.writeDescriptor(
+                        descriptor,
+                        BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                    )
+                } else {
+                    descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                    gatt.writeDescriptor(descriptor)
+                }
             }
         }
 
@@ -150,11 +157,18 @@ class CustomBluetoothManager @Inject constructor(
 
     fun <T> writeCharacteristic(command: BleCommand.Write<T>, value: T) {
         val characteristic = command.getCharacteristic() ?: throw CharacteristicNotFoundException()
-        bluetoothGatt?.writeCharacteristic(
-            characteristic,
-            command.encode(value),
-            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-        )
+        val encodedValue = command.encode(value)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            bluetoothGatt?.writeCharacteristic(
+                characteristic,
+                encodedValue,
+                BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            )
+        } else {
+            characteristic.value = encodedValue
+            bluetoothGatt?.writeCharacteristic(characteristic)
+        }
     }
 
     fun <T> BleCommand<T>.getCharacteristic(): BluetoothGattCharacteristic? {
