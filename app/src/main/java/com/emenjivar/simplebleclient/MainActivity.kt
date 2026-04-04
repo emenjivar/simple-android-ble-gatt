@@ -6,22 +6,22 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import com.emenjivar.simplebleclient.ble.CustomBluetoothManager
+import androidx.activity.viewModels
 import com.emenjivar.simplebleclient.ui.theme.SimpleBLEClientTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    private lateinit var bluetoothManager: CustomBluetoothManager
+    private val viewModel: MainViewModel by viewModels()
 
     @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        bluetoothManager = CustomBluetoothManager(context = application)
-
         enableEdgeToEdge()
         setContent {
             SimpleBLEClientTheme {
                 MainScreen(
-                    bluetoothManager = bluetoothManager,
+                    viewModel = viewModel,
                     onRequestBluetoothEnable = { intent ->
                         enableBluetoothLaunched.launch(intent)
                     }
@@ -34,7 +34,7 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             when (result.resultCode) {
                 RESULT_OK -> {
-                    runCatching { bluetoothManager.startScan() }
+                    runCatching { viewModel.startScan() }
                 }
 
                 RESULT_CANCELED -> {
@@ -48,6 +48,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
-        bluetoothManager.stopScan()
+        viewModel.stopScan()
     }
 }

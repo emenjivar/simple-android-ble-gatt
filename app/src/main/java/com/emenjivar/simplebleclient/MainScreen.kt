@@ -27,9 +27,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.emenjivar.simplebleclient.ble.BleConnectionState
 import com.emenjivar.simplebleclient.ble.BluetoothDisabledException
-import com.emenjivar.simplebleclient.ble.CustomBluetoothManager
-import com.emenjivar.simplebleclient.ble.LEDCommand
+import com.emenjivar.simplebleclient.ble.commands.LEDCommand
 import com.emenjivar.simplebleclient.permission.PermissionDeniedDialog
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -44,19 +44,18 @@ private val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
     listOf(Manifest.permission.ACCESS_FINE_LOCATION)
 }
 
-@androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
+@androidx.annotation.RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 @Stable
 fun MainScreen(
-    bluetoothManager: CustomBluetoothManager,
+    viewModel: MainViewModel,
     onRequestBluetoothEnable: (Intent) -> Unit
 ) {
     val context = LocalContext.current
-    val devices by bluetoothManager.pairedDevices.collectAsStateWithLifecycle()
-    val connectedDevice by bluetoothManager.connectedDevice.collectAsStateWithLifecycle()
-    val isConnecting by bluetoothManager.isConnecting.collectAsStateWithLifecycle()
-    val ledState by bluetoothManager.ledState.collectAsStateWithLifecycle()
+    val devices by viewModel.pairedDevices.collectAsStateWithLifecycle()
+    val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
+    val ledState by viewModel.ledState.collectAsStateWithLifecycle()
     val permissionState = rememberMultiplePermissionsState(permissions = permissions)
     val openPermissionDeniedDialog = remember { mutableStateOf(false) }
     var isScanning by remember { mutableStateOf(false) }
@@ -64,7 +63,7 @@ fun MainScreen(
     LaunchedEffect(isScanning) {
         if (isScanning) {
             delay(5_000)
-            bluetoothManager.stopScan()
+            viewModel.stopScan()
             isScanning = false
         }
     }
@@ -76,7 +75,7 @@ fun MainScreen(
         when {
             permissionState.allPermissionsGranted -> {
                 runCatching {
-                    bluetoothManager.startScan()
+                    viewModel.startScan()
                     isScanning = true
                 }.onFailure { exception ->
                     if (exception is BluetoothDisabledException) {
@@ -111,11 +110,10 @@ fun MainScreen(
             }
 
             items(devices.toList()) { device ->
-                val isConnected = connectedDevice?.address == device.address
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f),) {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "device: ${device.name}, address: ${device.address}"
                         )
@@ -124,17 +122,17 @@ fun MainScreen(
 
                     Column {
                         Button(
-                            enabled = !isConnecting,
+                            enabled = connectionState !is BleConnectionState.Connecting,
                             onClick = {
-                                if (isConnected) {
-                                    bluetoothManager.disconnect()
+                                if (connectionState.isConnected()) {
+                                    viewModel.disconnect()
                                 } else {
-                                    bluetoothManager.connect(device)
+                                    viewModel.connect(device)
                                 }
                             }
                         ) {
                             Text(
-                                text = if (isConnected) {
+                                text = if (connectionState.isConnected()) {
                                     "disconnect"
                                 } else {
                                     "Connect"
@@ -142,20 +140,17 @@ fun MainScreen(
                             )
                         }
 
-                        AnimatedVisibility(isConnected) {
+                        AnimatedVisibility(connectionState.isConnected()) {
                             Column {
-                                Button(onClick = { bluetoothManager.readCharacteristic() }) {
-                                    Text(text = "Read characteristic")
-                                }
                                 Button(onClick = {
                                     val state = when (ledState) {
                                         LEDCommand.ON -> LEDCommand.OFF
                                         else -> LEDCommand.ON
                                     }
-                                    bluetoothManager.writeCharacteristic(state)
+                                    viewModel.updateLedState(state)
                                 }
                                 ) {
-                                    Text(text = if(ledState == LEDCommand.ON) "Turn OFF" else "Turn ON")
+                                    Text(text = if (ledState == LEDCommand.ON) "Turn OFF" else "Turn ON")
                                 }
                             }
                         }
