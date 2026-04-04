@@ -9,7 +9,6 @@ import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.os.Build
-import com.emenjivar.simplebleclient.ble.commands.ReadLedStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -88,7 +87,7 @@ class CustomBluetoothManager @Inject constructor(
             status: Int
         ) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                bleNotifications.emit(ReadLedStatus, value)
+                bleNotifications.emit(characteristic.uuid, value)
             }
         }
 
@@ -101,7 +100,7 @@ class CustomBluetoothManager @Inject constructor(
                 val value = characteristic?.value
 
                 if (value != null) {
-                    bleNotifications.emit(ReadLedStatus, value)
+                    bleNotifications.emit(characteristic.uuid, value)
                 } else {
                     // Handle error here
                 }
@@ -113,7 +112,7 @@ class CustomBluetoothManager @Inject constructor(
             characteristic: BluetoothGattCharacteristic,
             value: ByteArray
         ) {
-            bleNotifications.emit(ReadLedStatus, value)
+            bleNotifications.emit(characteristic.uuid, value)
         }
 
         override fun onDescriptorWrite(

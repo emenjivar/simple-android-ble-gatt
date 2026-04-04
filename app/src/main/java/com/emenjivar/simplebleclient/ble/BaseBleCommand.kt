@@ -24,5 +24,21 @@ sealed class BleCommand<T> {
         override val characteristic: UUID
     ): BleCommand<T>() {
         abstract fun decode(bytes: ByteArray): T
+
+        // Runs when each object in initialized, self-registering into a shared map.
+        init {
+            register(this)
+        }
+
+        companion object {
+            // Shared across all read objects.
+            // allowing lookups by characteristic
+            private val _registry = mutableMapOf<UUID, Read<*>>()
+            val registry: Map<UUID, Read<*>> get() = _registry
+
+            internal fun register(command: Read<*>) {
+                _registry[command.characteristic] = command
+            }
+        }
     }
 }
