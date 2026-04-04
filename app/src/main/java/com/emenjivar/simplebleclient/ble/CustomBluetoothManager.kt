@@ -58,6 +58,8 @@ class CustomBluetoothManager @Inject constructor(
 
         override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
+                // TODO: you could iterate the notification characteristics here
+                //  using [BleCommand.Read.registry], but filtering by `notification`
                 val characteristic = gatt
                     ?.getService(primaryServiceUUID)
                     ?.getCharacteristic(ledCharacteristicUUID) ?: return
@@ -87,7 +89,11 @@ class CustomBluetoothManager @Inject constructor(
             status: Int
         ) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                bleNotifications.emit(characteristic.uuid, value)
+                bleNotifications.emit(
+                    service = characteristic.service.uuid,
+                    characteristic = characteristic.uuid,
+                    value = value
+                )
             }
         }
 
@@ -100,7 +106,11 @@ class CustomBluetoothManager @Inject constructor(
                 val value = characteristic?.value
 
                 if (value != null) {
-                    bleNotifications.emit(characteristic.uuid, value)
+                    bleNotifications.emit(
+                        service = characteristic.service.uuid,
+                        characteristic = characteristic.uuid,
+                        value = value
+                    )
                 } else {
                     // Handle error here
                 }
@@ -112,7 +122,11 @@ class CustomBluetoothManager @Inject constructor(
             characteristic: BluetoothGattCharacteristic,
             value: ByteArray
         ) {
-            bleNotifications.emit(characteristic.uuid, value)
+            bleNotifications.emit(
+                service = characteristic.service.uuid,
+                characteristic = characteristic.uuid,
+                value = value
+            )
         }
 
         override fun onDescriptorWrite(

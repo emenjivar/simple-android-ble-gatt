@@ -9,8 +9,7 @@ import java.util.UUID
 import javax.inject.Inject
 
 interface BleNotifications {
-    fun <T> emit(command: BleCommand.Read<T>, value: ByteArray)
-    fun emit(characteristic: UUID, value: ByteArray)
+    fun emit(service: UUID, characteristic: UUID, value: ByteArray)
     fun <T> observe(command: BleCommand.Read<T>): Flow<T>
 }
 
@@ -21,12 +20,11 @@ class BleNotificationsImp @Inject constructor() : BleNotifications {
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    override fun <T> emit(command: BleCommand.Read<T>, value: ByteArray) {
-        _updates.tryEmit(command.characteristic to value)
-    }
-
-    override fun emit(characteristic: UUID, value: ByteArray) {
-        val command = BleCommand.Read.registry[characteristic]
+    override fun emit(service: UUID, characteristic: UUID, value: ByteArray) {
+        val command = BleCommand.Read.getCommand(
+            service = service,
+            characteristic = characteristic
+        )
         if (command != null) {
             _updates.tryEmit(command.characteristic to value)
         }
