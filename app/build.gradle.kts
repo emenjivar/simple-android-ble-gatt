@@ -56,8 +56,6 @@ dependencies {
     implementation(libs.hilt)
     ksp(libs.hilt.compiler)
 
-    implementation("org.reflections:reflections:0.10.2")
-
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
