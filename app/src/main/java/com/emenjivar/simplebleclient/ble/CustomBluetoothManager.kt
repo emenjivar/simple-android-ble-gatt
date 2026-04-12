@@ -135,6 +135,13 @@ class CustomBluetoothManager @Inject constructor(
             status: Int
         ) {
             super.onDescriptorWrite(gatt, descriptor, status)
+            _connectionState.update { state ->
+                if (state is BleConnectionState.Connected) {
+                    state.copy(ready = true)
+                } else {
+                    state
+                }
+            }
         }
 
         override fun onCharacteristicWrite(
