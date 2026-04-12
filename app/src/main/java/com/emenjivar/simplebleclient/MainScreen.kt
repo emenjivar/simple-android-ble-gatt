@@ -119,9 +119,16 @@ fun MainScreen(
                         Text(
                             text = "device: ${device.name}, address: ${device.address}"
                         )
-                        Text(text = "led state: $ledState")
-                        Text(text = "ip: $ipAddress")
-                        Text(text = "ssid: $ssid")
+
+                        AnimatedVisibility(
+                            visible = connectionState.isConnected()
+                        ) {
+                            Column {
+                                Text(text = "led state: $ledState")
+                                Text(text = "ip: $ipAddress")
+                                Text(text = "ssid: $ssid")
+                            }
+                        }
                     }
 
                     Column {
