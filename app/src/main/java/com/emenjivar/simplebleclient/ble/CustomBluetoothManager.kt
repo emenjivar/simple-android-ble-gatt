@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.util.concurrent.ConcurrentLinkedQueue
 import javax.inject.Inject
 
 @SuppressLint("MissingPermission")
@@ -25,7 +26,28 @@ class CustomBluetoothManager @Inject constructor(
     private val _connectionState = MutableStateFlow<BleConnectionState>(BleConnectionState.Disconnected)
     val connectionState: StateFlow<BleConnectionState> = _connectionState.asStateFlow()
 
-    private val commandQueue = ArrayDeque<BleCommand.Read<*>>()
+    private val commandQueue = ConcurrentLinkedQueue<() -> Unit>()
+    private var isProcessing = false
+
+    private fun enqueue(operation: () -> Unit) {
+        commandQueue.add(operation)
+        if (!isProcessing) processNext()
+    }
+
+    private fun processNext() {
+        val next = commandQueue.poll()
+        if (next != null) {
+            isProcessing = true
+            next()
+        } else {
+            isProcessing = false
+        }
+    }
+
+    private fun operationComplete() {
+        isProcessing = false
+        processNext()
+    }
 
     private val gattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
@@ -91,22 +113,14 @@ class CustomBluetoothManager @Inject constructor(
             status: Int
         ) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                commandQueue.removeFirstOrNull()
-
                 bleNotifications.emit(
                     service = characteristic.service.uuid,
                     characteristic = characteristic.uuid,
                     value = value
                 )
-
-                if (commandQueue.isNotEmpty()) {
-                    // Do not remove yet the command
-                    val next = commandQueue.firstOrNull()?.getCharacteristic()
-                    if (next != null) {
-                        gatt.readCharacteristic(next)
-                    }
-                }
             }
+
+            operationComplete()
         }
 
         override fun onCharacteristicRead(
@@ -127,6 +141,8 @@ class CustomBluetoothManager @Inject constructor(
                     // Handle error here
                 }
             }
+
+            operationComplete()
         }
 
         override fun onCharacteristicChanged(
@@ -154,6 +170,7 @@ class CustomBluetoothManager @Inject constructor(
                     state
                 }
             }
+            operationComplete()
         }
 
         override fun onCharacteristicWrite(
@@ -162,6 +179,7 @@ class CustomBluetoothManager @Inject constructor(
             status: Int
         ) {
             super.onCharacteristicWrite(gatt, characteristic, status)
+            operationComplete()
         }
     }
 
@@ -177,30 +195,26 @@ class CustomBluetoothManager @Inject constructor(
         bluetoothGatt?.disconnect()
     }
 
-
     fun <T> readCharacteristic(command: BleCommand.Read<T>) {
         val characteristic = command.getCharacteristic() ?: throw CharacteristicNotFoundException()
-
-        commandQueue.add(command)
-
-        if (commandQueue.size == 1) {
-            bluetoothGatt?.readCharacteristic(characteristic)
-        }
+        enqueue { bluetoothGatt?.readCharacteristic(characteristic) }
     }
 
     fun <T> writeCharacteristic(command: BleCommand.Write<T>, value: T) {
         val characteristic = command.getCharacteristic() ?: throw CharacteristicNotFoundException()
         val encodedValue = command.encode(value)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            bluetoothGatt?.writeCharacteristic(
-                characteristic,
-                encodedValue,
-                BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-            )
-        } else {
-            characteristic.value = encodedValue
-            bluetoothGatt?.writeCharacteristic(characteristic)
+        enqueue {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                bluetoothGatt?.writeCharacteristic(
+                    characteristic,
+                    encodedValue,
+                    BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                )
+            } else {
+                characteristic.value = encodedValue
+                bluetoothGatt?.writeCharacteristic(characteristic)
+            }
         }
     }
 
