@@ -3,6 +3,8 @@ package com.emenjivar.simplebleclient.di
 import android.content.Context
 import com.emenjivar.simplebleclient.ble.BleNotifications
 import com.emenjivar.simplebleclient.ble.BleNotificationsImp
+import com.emenjivar.simplebleclient.ble.BleOperationQueue
+import com.emenjivar.simplebleclient.ble.BleOperationQueueImp
 import com.emenjivar.simplebleclient.ble.CustomBluetoothManager
 import dagger.Module
 import dagger.Provides
@@ -21,11 +23,17 @@ object MainModule {
 
     @Provides
     @Singleton
+    fun providesBleOperationQueue(): BleOperationQueue = BleOperationQueueImp()
+
+    @Provides
+    @Singleton
     fun provideCustomBluetoothManager(
         @ApplicationContext context: Context,
         bleNotifications: BleNotifications,
+        bleOperationQueue: BleOperationQueue,
     ) = CustomBluetoothManager(
         context = context,
-        bleNotifications = bleNotifications
+        bleNotifications = bleNotifications,
+        bleOperationQueue = bleOperationQueue
     )
 }
