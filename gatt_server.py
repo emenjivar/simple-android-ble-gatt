@@ -6,6 +6,7 @@ import subprocess
 SERVICE_UUID            = '290edf15-b540-4e83-83cf-ba647bf4df20'
 CHARACTERISTIC_UUID     = '290edf15-b540-4e83-83cf-ba647bf4df21'
 GET_IP_UUID   = '290edf15-b540-4e83-83cf-ba647bf4df22'
+GET_SSID_UUID = '290edf15-b540-4e83-83cf-ba647bf4df23'
 
 # Value to expose
 LED_OFF = 0x00
@@ -31,6 +32,15 @@ def get_ip_address():
     except Exception:
         pass
     return list('0.0.0.0'.encode('utf8'))
+
+def get_ssid():
+    try:
+        result = subprocess.check_output(['iwgetid', '-r'])
+        ssid = result.decode().strip()
+        return list(ssid.encode('utf8'))
+    except Exception:
+        pass
+    return list('N/A'.encode('utf8'))
 
 def notify_callback(notifying, characteristic):
     if notifying:
@@ -95,6 +105,18 @@ def main():
         notifying = False,
         flags = ['read'],
         read_callback = get_ip_address,
+        write_callback = None,
+        notify_callback = None
+    )
+
+    app.add_characteristic(
+        srv_id = 1,
+        chr_id = 3,
+        uuid = GET_SSID_UUID,
+        value = get_ssid(),
+        notifying = False,
+        flags = ['read'],
+        read_callback = get_ssid,
         write_callback = None,
         notify_callback = None
     )
