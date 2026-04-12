@@ -1,9 +1,11 @@
 from bluezero import adapter, peripheral
 from gpiozero import LED
+import subprocess
 
 ## UUIDS
-SERVICE_UUID        = '290edf15-b540-4e83-83cf-ba647bf4df20'
-CHARACTERISTIC_UUID = '290edf15-b540-4e83-83cf-ba647bf4df21'
+SERVICE_UUID            = '290edf15-b540-4e83-83cf-ba647bf4df20'
+CHARACTERISTIC_UUID     = '290edf15-b540-4e83-83cf-ba647bf4df21'
+GET_IP_UUID   = '290edf15-b540-4e83-83cf-ba647bf4df22'
 
 # Value to expose
 LED_OFF = 0x00
@@ -18,6 +20,17 @@ char_obj = None  # Direct reference to the characteristic
 def read_value():
     print(f"[READ] Characteristic was read: {LED_STATE}")
     return LED_STATE
+
+def get_ip_address():
+    try:
+        result = subprocess.check_output(['ip', 'addr', 'show', 'wlan0'])
+        for line in result.decode().splitlines():
+            if 'inet ' in line:
+                ip = line.strip().split()[1].split('/')[0]
+                return list(ip.encode('utf8'))
+    except Exception:
+        pass
+    return list('0.0.0.0'.encode('utf8'))
 
 def notify_callback(notifying, characteristic):
     if notifying:
@@ -72,6 +85,18 @@ def main():
         read_callback = read_value,
         write_callback = write_value,
         notify_callback = notify_callback
+    )
+
+    app.add_characteristic(
+        srv_id = 1,
+        chr_id = 2,
+        uuid = GET_IP_UUID,
+        value = get_ip_address(),
+        notifying = False,
+        flags = ['read'],
+        read_callback = get_ip_address,
+        write_callback = None,
+        notify_callback = None
     )
 
     char_obj = app.characteristics[0]
