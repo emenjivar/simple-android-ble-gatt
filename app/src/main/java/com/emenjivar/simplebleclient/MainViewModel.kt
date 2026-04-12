@@ -7,6 +7,7 @@ import com.emenjivar.simplebleclient.ble.BleConnectionState
 import com.emenjivar.simplebleclient.ble.BleNotifications
 import com.emenjivar.simplebleclient.ble.CustomBluetoothManager
 import com.emenjivar.simplebleclient.ble.commands.GetIPAddress
+import com.emenjivar.simplebleclient.ble.commands.GetSSID
 import com.emenjivar.simplebleclient.ble.commands.LEDCommand
 import com.emenjivar.simplebleclient.ble.commands.ReadLedStatus
 import com.emenjivar.simplebleclient.ble.commands.WriteLedStatus
@@ -39,10 +40,18 @@ class MainViewModel @Inject constructor(
             initialValue = "0.0.0.0"
         )
 
+    val ssid = bleNotifications.observe(GetSSID)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = "N/A"
+        )
+
     init {
         connectionState.onEach { state ->
             if (state is BleConnectionState.Connected && state.ready) {
                 customBluetoothManager.readCharacteristic(GetIPAddress)
+                customBluetoothManager.readCharacteristic(GetSSID)
             }
         }.launchIn(viewModelScope)
     }

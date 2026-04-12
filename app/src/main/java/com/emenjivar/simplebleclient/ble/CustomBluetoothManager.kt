@@ -19,6 +19,7 @@ import javax.inject.Inject
 class CustomBluetoothManager @Inject constructor(
     private val context: Context,
     private val bleNotifications: BleNotifications,
+    private val bleOperationQueue: BleOperationQueue,
     private val scanner: BleScanner = BleScannerImp(context)
 ) : BleScanner by scanner {
     private var bluetoothGatt: BluetoothGatt? = null
@@ -41,6 +42,7 @@ class CustomBluetoothManager @Inject constructor(
                 }
 
                 BluetoothProfile.STATE_DISCONNECTED -> {
+                    bleOperationQueue.clear()
                     bluetoothGatt?.close()
                     _connectionState.update { BleConnectionState.Disconnected }
                     bluetoothGatt = null
@@ -95,6 +97,8 @@ class CustomBluetoothManager @Inject constructor(
                     value = value
                 )
             }
+
+            bleOperationQueue.operationComplete()
         }
 
         override fun onCharacteristicRead(
@@ -115,6 +119,8 @@ class CustomBluetoothManager @Inject constructor(
                     // Handle error here
                 }
             }
+
+            bleOperationQueue.operationComplete()
         }
 
         override fun onCharacteristicChanged(
@@ -142,6 +148,7 @@ class CustomBluetoothManager @Inject constructor(
                     state
                 }
             }
+            bleOperationQueue.operationComplete()
         }
 
         override fun onCharacteristicWrite(
@@ -150,6 +157,7 @@ class CustomBluetoothManager @Inject constructor(
             status: Int
         ) {
             super.onCharacteristicWrite(gatt, characteristic, status)
+            bleOperationQueue.operationComplete()
         }
     }
 
@@ -165,25 +173,26 @@ class CustomBluetoothManager @Inject constructor(
         bluetoothGatt?.disconnect()
     }
 
-
     fun <T> readCharacteristic(command: BleCommand.Read<T>) {
         val characteristic = command.getCharacteristic() ?: throw CharacteristicNotFoundException()
-        bluetoothGatt?.readCharacteristic(characteristic)
+        bleOperationQueue.enqueue { bluetoothGatt?.readCharacteristic(characteristic) }
     }
 
     fun <T> writeCharacteristic(command: BleCommand.Write<T>, value: T) {
         val characteristic = command.getCharacteristic() ?: throw CharacteristicNotFoundException()
         val encodedValue = command.encode(value)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            bluetoothGatt?.writeCharacteristic(
-                characteristic,
-                encodedValue,
-                BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-            )
-        } else {
-            characteristic.value = encodedValue
-            bluetoothGatt?.writeCharacteristic(characteristic)
+        bleOperationQueue.enqueue {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                bluetoothGatt?.writeCharacteristic(
+                    characteristic,
+                    encodedValue,
+                    BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                )
+            } else {
+                characteristic.value = encodedValue
+                bluetoothGatt?.writeCharacteristic(characteristic)
+            }
         }
     }
 
