@@ -25,6 +25,8 @@ class CustomBluetoothManager @Inject constructor(
     private val _connectionState = MutableStateFlow<BleConnectionState>(BleConnectionState.Disconnected)
     val connectionState: StateFlow<BleConnectionState> = _connectionState.asStateFlow()
 
+    private val commandQueue = ArrayDeque<BleCommand.Read<*>>()
+
     private val gattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
             when (newState) {
@@ -89,11 +91,21 @@ class CustomBluetoothManager @Inject constructor(
             status: Int
         ) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
+                commandQueue.removeFirstOrNull()
+
                 bleNotifications.emit(
                     service = characteristic.service.uuid,
                     characteristic = characteristic.uuid,
                     value = value
                 )
+
+                if (commandQueue.isNotEmpty()) {
+                    // Do not remove yet the command
+                    val next = commandQueue.firstOrNull()?.getCharacteristic()
+                    if (next != null) {
+                        gatt.readCharacteristic(next)
+                    }
+                }
             }
         }
 
@@ -168,7 +180,12 @@ class CustomBluetoothManager @Inject constructor(
 
     fun <T> readCharacteristic(command: BleCommand.Read<T>) {
         val characteristic = command.getCharacteristic() ?: throw CharacteristicNotFoundException()
-        bluetoothGatt?.readCharacteristic(characteristic)
+
+        commandQueue.add(command)
+
+        if (commandQueue.size == 1) {
+            bluetoothGatt?.readCharacteristic(characteristic)
+        }
     }
 
     fun <T> writeCharacteristic(command: BleCommand.Write<T>, value: T) {

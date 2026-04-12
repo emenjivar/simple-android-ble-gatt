@@ -57,6 +57,7 @@ fun MainScreen(
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
     val ledState by viewModel.ledState.collectAsStateWithLifecycle()
     val ipAddress by viewModel.ipAddress.collectAsStateWithLifecycle()
+    val ssid by viewModel.ssid.collectAsStateWithLifecycle()
     val permissionState = rememberMultiplePermissionsState(permissions = permissions)
     val openPermissionDeniedDialog = remember { mutableStateOf(false) }
     var isScanning by remember { mutableStateOf(false) }
@@ -120,6 +121,7 @@ fun MainScreen(
                         )
                         Text(text = "led state: $ledState")
                         Text(text = "ip: $ipAddress")
+                        Text(text = "ssid: $ssid")
                     }
 
                     Column {
