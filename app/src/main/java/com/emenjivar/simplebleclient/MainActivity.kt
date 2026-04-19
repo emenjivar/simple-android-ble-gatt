@@ -7,6 +7,15 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.ui.NavDisplay
+import com.emenjivar.simplebleclient.ui.detail.DetailRoute
+import com.emenjivar.simplebleclient.ui.detail.DetailScreen
+import com.emenjivar.simplebleclient.ui.main.MainRoute
+import com.emenjivar.simplebleclient.ui.main.MainScreen
+import com.emenjivar.simplebleclient.ui.main.MainViewModel
 import com.emenjivar.simplebleclient.ui.theme.SimpleBLEClientTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -19,13 +28,30 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            val backStack = remember { mutableStateListOf<Any>(MainRoute) }
+
             SimpleBLEClientTheme {
-                MainScreen(
-                    viewModel = viewModel,
-                    onRequestBluetoothEnable = { intent ->
-                        enableBluetoothLaunched.launch(intent)
+                NavDisplay(
+                    backStack = backStack,
+                    onBack = { backStack.removeLastOrNull() },
+                    entryProvider = entryProvider {
+                        entry<MainRoute> {
+                            MainScreen(
+                                viewModel = viewModel,
+                                onRequestBluetoothEnable = { intent ->
+                                    enableBluetoothLaunched.launch(intent)
+                                },
+                                onClickDetail = { macAddress ->
+                                    backStack.add(DetailRoute(macAddress = macAddress))
+                                }
+                            )
+                        }
+                        entry<DetailRoute> { key ->
+                            DetailScreen(macAddress = key.macAddress)
+                        }
                     }
                 )
+
             }
         }
     }

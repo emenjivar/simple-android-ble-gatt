@@ -1,4 +1,4 @@
-package com.emenjivar.simplebleclient
+package com.emenjivar.simplebleclient.ui.main
 
 import android.bluetooth.BluetoothDevice
 import androidx.lifecycle.ViewModel
