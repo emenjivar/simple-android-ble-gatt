@@ -1,4 +1,4 @@
-package com.emenjivar.simplebleclient
+package com.emenjivar.simplebleclient.ui.main
 
 import android.bluetooth.BluetoothDevice
 import androidx.lifecycle.ViewModel
@@ -20,32 +20,10 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val customBluetoothManager: CustomBluetoothManager,
-    bleNotifications: BleNotifications
+    private val customBluetoothManager: CustomBluetoothManager
 ) : ViewModel() {
     val pairedDevices = customBluetoothManager.scannedDevices
     val connectionState = customBluetoothManager.connectionState
-
-    val ledState = bleNotifications.observe(ReadLedStatus)
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = LEDCommand.OFF
-        )
-
-    val ipAddress = bleNotifications.observe(GetIPAddress)
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = "0.0.0.0"
-        )
-
-    val ssid = bleNotifications.observe(GetSSID)
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = "N/A"
-        )
 
     init {
         connectionState.onEach { state ->
@@ -60,8 +38,4 @@ class MainViewModel @Inject constructor(
     fun stopScan() = customBluetoothManager.stopScan()
     fun connect(device: BluetoothDevice) = customBluetoothManager.connect(device)
     fun disconnect() = customBluetoothManager.disconnect()
-
-    fun updateLedState(state: LEDCommand) {
-        customBluetoothManager.writeCharacteristic(WriteLedStatus, state)
-    }
 }

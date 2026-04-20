@@ -1,4 +1,4 @@
-package com.emenjivar.simplebleclient
+package com.emenjivar.simplebleclient.ui.main
 
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.annotation.RequiresPermission
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,7 +30,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.emenjivar.simplebleclient.ble.BleConnectionState
 import com.emenjivar.simplebleclient.ble.BluetoothDisabledException
-import com.emenjivar.simplebleclient.ble.commands.LEDCommand
 import com.emenjivar.simplebleclient.permission.PermissionDeniedDialog
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -44,20 +44,18 @@ private val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
     listOf(Manifest.permission.ACCESS_FINE_LOCATION)
 }
 
-@androidx.annotation.RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+@RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 @Stable
 fun MainScreen(
     viewModel: MainViewModel,
-    onRequestBluetoothEnable: (Intent) -> Unit
+    onRequestBluetoothEnable: (Intent) -> Unit,
+    onClickDetail: (macAddress: String) -> Unit
 ) {
     val context = LocalContext.current
     val devices by viewModel.pairedDevices.collectAsStateWithLifecycle()
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
-    val ledState by viewModel.ledState.collectAsStateWithLifecycle()
-    val ipAddress by viewModel.ipAddress.collectAsStateWithLifecycle()
-    val ssid by viewModel.ssid.collectAsStateWithLifecycle()
     val permissionState = rememberMultiplePermissionsState(permissions = permissions)
     val openPermissionDeniedDialog = remember { mutableStateOf(false) }
     var isScanning by remember { mutableStateOf(false) }
@@ -119,16 +117,6 @@ fun MainScreen(
                         Text(
                             text = "device: ${device.name}, address: ${device.address}"
                         )
-
-                        AnimatedVisibility(
-                            visible = connectionState.isConnected()
-                        ) {
-                            Column {
-                                Text(text = "led state: $ledState")
-                                Text(text = "ip: $ipAddress")
-                                Text(text = "ssid: $ssid")
-                            }
-                        }
                     }
 
                     Column {
@@ -151,18 +139,13 @@ fun MainScreen(
                             )
                         }
 
-                        AnimatedVisibility(connectionState.isConnected()) {
-                            Column {
-                                Button(onClick = {
-                                    val state = when (ledState) {
-                                        LEDCommand.ON -> LEDCommand.OFF
-                                        else -> LEDCommand.ON
-                                    }
-                                    viewModel.updateLedState(state)
-                                }
-                                ) {
-                                    Text(text = if (ledState == LEDCommand.ON) "Turn OFF" else "Turn ON")
-                                }
+                        AnimatedVisibility(
+                            visible = connectionState.isConnected()
+                        ) {
+                            Button(
+                                onClick = { onClickDetail(device.address) }
+                            ) {
+                                Text("Open details")
                             }
                         }
                     }
