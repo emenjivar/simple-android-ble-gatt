@@ -117,16 +117,6 @@ fun MainScreen(
                         Text(
                             text = "device: ${device.name}, address: ${device.address}"
                         )
-
-                        AnimatedVisibility(
-                            visible = connectionState.isConnected()
-                        ) {
-                            Button(
-                                onClick = { onClickDetail(device.address) }
-                            ) {
-                                Text("Open details")
-                            }
-                        }
                     }
 
                     Column {
@@ -147,6 +137,16 @@ fun MainScreen(
                                     "Connect"
                                 }
                             )
+                        }
+
+                        AnimatedVisibility(
+                            visible = connectionState.isConnected()
+                        ) {
+                            Button(
+                                onClick = { onClickDetail(device.address) }
+                            ) {
+                                Text("Open details")
+                            }
                         }
                     }
                 }
