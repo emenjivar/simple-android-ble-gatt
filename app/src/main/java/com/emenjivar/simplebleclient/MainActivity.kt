@@ -46,8 +46,8 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
-                        entry<DetailRoute> { key ->
-                            DetailScreen(macAddress = key.macAddress)
+                        entry<DetailRoute> { route ->
+                            DetailScreen(route = route)
                         }
                     }
                 )

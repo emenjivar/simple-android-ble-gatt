@@ -35,6 +35,7 @@ google-accompanist-permissions = { group = "com.google.accompanist", name = "acc
 # DI
 hilt = { group = "com.google.dagger", name="hilt-android", version.ref="hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref="hilt" }
+hilt-compose = { group = "androidx.hilt", name="hilt-navigation-compose", version = "1.3.0" }
 
 # Navigation
 androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "nav3Core" }

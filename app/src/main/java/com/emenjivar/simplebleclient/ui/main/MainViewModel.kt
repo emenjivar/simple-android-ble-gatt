@@ -33,19 +33,19 @@ class MainViewModel @Inject constructor(
             initialValue = LEDCommand.OFF
         )
 
-    val ipAddress = bleNotifications.observe(GetIPAddress)
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = "0.0.0.0"
-        )
-
-    val ssid = bleNotifications.observe(GetSSID)
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = "N/A"
-        )
+//    val ipAddress = bleNotifications.observe(GetIPAddress)
+//        .stateIn(
+//            scope = viewModelScope,
+//            started = SharingStarted.WhileSubscribed(5_000),
+//            initialValue = "0.0.0.0"
+//        )
+//
+//    val ssid = bleNotifications.observe(GetSSID)
+//        .stateIn(
+//            scope = viewModelScope,
+//            started = SharingStarted.WhileSubscribed(5_000),
+//            initialValue = "N/A"
+//        )
 
     init {
         connectionState.onEach { state ->
