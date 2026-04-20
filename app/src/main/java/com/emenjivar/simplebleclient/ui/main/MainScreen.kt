@@ -30,7 +30,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.emenjivar.simplebleclient.ble.BleConnectionState
 import com.emenjivar.simplebleclient.ble.BluetoothDisabledException
-import com.emenjivar.simplebleclient.ble.commands.LEDCommand
 import com.emenjivar.simplebleclient.permission.PermissionDeniedDialog
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -57,9 +56,6 @@ fun MainScreen(
     val context = LocalContext.current
     val devices by viewModel.pairedDevices.collectAsStateWithLifecycle()
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
-    val ledState by viewModel.ledState.collectAsStateWithLifecycle()
-//    val ipAddress by viewModel.ipAddress.collectAsStateWithLifecycle()
-//    val ssid by viewModel.ssid.collectAsStateWithLifecycle()
     val permissionState = rememberMultiplePermissionsState(permissions = permissions)
     val openPermissionDeniedDialog = remember { mutableStateOf(false) }
     var isScanning by remember { mutableStateOf(false) }
@@ -125,16 +121,10 @@ fun MainScreen(
                         AnimatedVisibility(
                             visible = connectionState.isConnected()
                         ) {
-                            Column {
-                                Text(text = "led state: $ledState")
-//                                Text(text = "ip: $ipAddress")
-//                                Text(text = "ssid: $ssid")
-
-                                Button(
-                                    onClick = { onClickDetail(device.address) }
-                                ) {
-                                    Text("Open details")
-                                }
+                            Button(
+                                onClick = { onClickDetail(device.address) }
+                            ) {
+                                Text("Open details")
                             }
                         }
                     }
@@ -157,21 +147,6 @@ fun MainScreen(
                                     "Connect"
                                 }
                             )
-                        }
-
-                        AnimatedVisibility(connectionState.isConnected()) {
-                            Column {
-                                Button(onClick = {
-                                    val state = when (ledState) {
-                                        LEDCommand.ON -> LEDCommand.OFF
-                                        else -> LEDCommand.ON
-                                    }
-                                    viewModel.updateLedState(state)
-                                }
-                                ) {
-                                    Text(text = if (ledState == LEDCommand.ON) "Turn OFF" else "Turn ON")
-                                }
-                            }
                         }
                     }
                 }
