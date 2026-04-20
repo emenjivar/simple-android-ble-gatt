@@ -15,13 +15,12 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 
 @HiltViewModel(assistedFactory = DetailViewModel.Factory::class)
@@ -40,7 +39,10 @@ class DetailViewModel @AssistedInject constructor(
 
     private val ipAddress = bleNotifications.observe(GetIPAddress)
     private val ssid = bleNotifications.observe(GetSSID)
-    //private val ledState = bleNotifications.observe(ReadLedStatus)
+
+    // Notification type, needs an initial default value
+    private val ledState = bleNotifications.observe(ReadLedStatus)
+        .onStart { emit(LEDCommand.OFF) }
 
     init {
         // Read characteristics when connection is ready
@@ -52,12 +54,12 @@ class DetailViewModel @AssistedInject constructor(
         }.launchIn(viewModelScope)
 
         // Listed BLE responses and updated uiState
-        combine(ipAddress, ssid) { ipAddress, ssid -> //, ledState ->
+        combine(ipAddress, ssid, ledState) { ipAddress, ssid, ledState ->
             _uiState.update {
                 it.copy(
                     ipAddress = ipAddress,
                     ssid = ssid,
-//                    ledState = ledState
+                    ledState = ledState
                 )
             }
         }.launchIn(viewModelScope)
