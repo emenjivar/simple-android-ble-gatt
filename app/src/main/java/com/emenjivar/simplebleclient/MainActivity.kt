@@ -47,7 +47,12 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         entry<DetailRoute> { route ->
-                            DetailScreen(route = route)
+                            DetailScreen(
+                                route = route,
+                                onNavigateBack = {
+                                    backStack.removeLastOrNull()
+                                }
+                            )
                         }
                     }
                 )

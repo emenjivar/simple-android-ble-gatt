@@ -32,7 +32,12 @@ class DetailViewModel @AssistedInject constructor(
 ) : ViewModel() {
 
     // TODO: use backing fields here
-    private val _uiState = MutableStateFlow(DetailUiState(macAddress = route.device.address))
+    private val _uiState = MutableStateFlow(
+        DetailUiState(
+            macAddress = route.device.address,
+            deviceName = route.device.name
+        )
+    )
     val uiState: StateFlow<DetailUiState> = _uiState.asStateFlow()
 
     // Assuming a connected device
