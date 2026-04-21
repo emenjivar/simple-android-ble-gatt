@@ -63,7 +63,7 @@ private val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
 fun MainScreen(
     viewModel: MainViewModel,
     onRequestBluetoothEnable: (Intent) -> Unit,
-    onClickDetail: (macAddress: String) -> Unit
+    onClickDetail: (device: BluetoothDevice) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     MainScreen(
@@ -83,7 +83,7 @@ fun MainScreen(
 fun MainScreen(
     uiState: MainUiState,
     onRequestBluetoothEnable: (Intent) -> Unit,
-    onClickDetail: (macAddress: String) -> Unit,
+    onClickDetail: (device: BluetoothDevice) -> Unit,
     onStartScan: () -> Unit,
     onStopScan: () -> Unit,
     onConnect: (device: BluetoothDevice) -> Unit,
@@ -186,7 +186,7 @@ fun MainScreen(
                             name = device.name,
                             macAddress = device.address,
                             onClick = {
-                                onClickDetail(device.address)
+                                onClickDetail(device)
                             }
                         )
 //                    Row(

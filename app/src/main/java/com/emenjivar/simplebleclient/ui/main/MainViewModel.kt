@@ -36,13 +36,6 @@ class MainViewModel @Inject constructor(
                 it.copy(pairedDevices = pairedDevices, connectionState = connectionState)
             }
         }.launchIn(viewModelScope)
-
-//        connectionState.onEach { state ->
-//            if (state is BleConnectionState.Connected && state.ready) {
-//                customBluetoothManager.readCharacteristic(GetIPAddress)
-//                customBluetoothManager.readCharacteristic(GetSSID)
-//            }
-//        }.launchIn(viewModelScope)
     }
 
     fun startScan() = customBluetoothManager.startScan()

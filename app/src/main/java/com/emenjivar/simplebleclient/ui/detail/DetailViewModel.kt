@@ -1,5 +1,6 @@
 package com.emenjivar.simplebleclient.ui.detail
 
+import android.bluetooth.BluetoothDevice
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.emenjivar.simplebleclient.ble.BleConnectionState
@@ -31,7 +32,7 @@ class DetailViewModel @AssistedInject constructor(
 ) : ViewModel() {
 
     // TODO: use backing fields here
-    private val _uiState = MutableStateFlow(DetailUiState(macAddress = route.macAddress))
+    private val _uiState = MutableStateFlow(DetailUiState(macAddress = route.device.address))
     val uiState: StateFlow<DetailUiState> = _uiState.asStateFlow()
 
     // Assuming a connected device
@@ -45,6 +46,8 @@ class DetailViewModel @AssistedInject constructor(
         .onStart { emit(LEDCommand.OFF) }
 
     init {
+        connect(route.device)
+
         // Read characteristics when connection is ready
         connectionState.onEach { state ->
             if (state is BleConnectionState.Connected && state.ready) {
@@ -67,6 +70,13 @@ class DetailViewModel @AssistedInject constructor(
 
     fun updateLedState(state: LEDCommand) {
         customBluetoothManager.writeCharacteristic(WriteLedStatus, state)
+    }
+
+    fun connect(device: BluetoothDevice) = customBluetoothManager.connect(device)
+    fun disconnect() = customBluetoothManager.disconnect()
+
+    override fun onCleared() {
+        disconnect()
     }
 
     @AssistedFactory
