@@ -62,12 +62,18 @@ class DetailViewModel @AssistedInject constructor(
         }.launchIn(viewModelScope)
 
         // Listed BLE responses and updated uiState
-        combine(ipAddress, ssid, ledState) { ipAddress, ssid, ledState ->
+        combine(
+            ipAddress,
+            ssid,
+            ledState,
+            connectionState
+        ) { ipAddress, ssid, ledState, connectionState ->
             _uiState.update {
                 it.copy(
                     ipAddress = ipAddress,
                     ssid = ssid,
-                    ledState = ledState
+                    ledState = ledState,
+                    connectionState = connectionState
                 )
             }
         }.launchIn(viewModelScope)
