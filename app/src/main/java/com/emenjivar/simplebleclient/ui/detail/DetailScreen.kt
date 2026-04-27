@@ -1,13 +1,11 @@
 package com.emenjivar.simplebleclient.ui.detail
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.AnimationState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,15 +25,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.emenjivar.simplebleclient.R
 import com.emenjivar.simplebleclient.ble.BleConnectionState
 import com.emenjivar.simplebleclient.ble.commands.LEDCommand
@@ -65,12 +61,12 @@ fun DetailScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailScreen(
-   uiState: DetailUiState,
-   onUpdateLedState: (LEDCommand) -> Unit,
-   onConnectDevice: () -> Unit,
-   onConnectToWifi: () -> Unit,
-   onDisconnectDevice: () -> Unit,
-   onNavigateBack: () -> Unit
+    uiState: DetailUiState,
+    onUpdateLedState: (LEDCommand) -> Unit,
+    onConnectDevice: () -> Unit,
+    onConnectToWifi: () -> Unit,
+    onDisconnectDevice: () -> Unit,
+    onNavigateBack: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -126,6 +122,7 @@ fun DetailScreen(
                             )
                         }
                     }
+
                     else -> {
                         val enableButton = remember(uiState.connectionState) {
                             uiState.connectionState == BleConnectionState.Disconnected || uiState.connectionState == BleConnectionState.Failed
@@ -171,13 +168,15 @@ fun DetailScreen(
                     value = uiState.ipAddress
                 )
 
-                Button(onClick = {
-                    val state = when (uiState.ledState) {
-                        LEDCommand.ON -> LEDCommand.OFF
-                        else -> LEDCommand.ON
+                Button(
+                    enabled = uiState.connectionState.isConnected(),
+                    onClick = {
+                        val state = when (uiState.ledState) {
+                            LEDCommand.ON -> LEDCommand.OFF
+                            else -> LEDCommand.ON
+                        }
+                        onUpdateLedState(state)
                     }
-                    onUpdateLedState(state)
-                }
                 ) {
                     Text(text = if (uiState.ledState == LEDCommand.ON) "Turn OFF" else "Turn ON")
                 }
