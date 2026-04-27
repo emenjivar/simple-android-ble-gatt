@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.emenjivar.simplebleclient.ble.BleConnectionState
 import com.emenjivar.simplebleclient.ble.BluetoothDisabledException
 import com.emenjivar.simplebleclient.permission.PermissionDeniedDialog
 import com.emenjivar.simplebleclient.ui.main.components.DeviceItem
@@ -177,9 +178,20 @@ fun MainScreen(
                     item { Spacer(modifier = Modifier.height(12.dp)) }
 
                     items(uiState.pairedDevices.toList()) { device ->
+                        // Verify if the item match with the connected device
+                        val deviceState = remember(uiState.connectionState) {
+                            val state = uiState.connectionState
+                            if (state is BleConnectionState.Connected && state.device == device) {
+                                state
+                            } else {
+                                BleConnectionState.Disconnected
+                            }
+                        }
+
                         DeviceItem(
                             name = device.name,
                             macAddress = device.address,
+                            status = deviceState,
                             onClick = {
                                 onClickDetail(device)
                             }

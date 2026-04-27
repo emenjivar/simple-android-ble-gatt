@@ -57,7 +57,7 @@ fun DeviceStatus(
     }
 }
 
-private fun BleConnectionState.getStatusColor(): Color {
+fun BleConnectionState.getStatusColor(): Color {
     return when (this) {
         is BleConnectionState.Connected -> GreenOpaque
         is BleConnectionState.Connecting -> Orange
