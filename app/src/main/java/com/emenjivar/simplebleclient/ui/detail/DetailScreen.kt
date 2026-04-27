@@ -10,7 +10,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,12 +19,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -52,8 +49,8 @@ import com.emenjivar.simplebleclient.ui.components.PrimaryButton
 import com.emenjivar.simplebleclient.ui.components.SecondaryButton
 import com.emenjivar.simplebleclient.ui.detail.components.DeviceSpecificationItem
 import com.emenjivar.simplebleclient.ui.detail.components.DeviceStatus
+import com.emenjivar.simplebleclient.ui.detail.components.WifiBottomSheet
 import com.emenjivar.simplebleclient.ui.theme.SimpleBLEClientTheme
-import com.emenjivar.simplebleclient.wifi.StateResult
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
@@ -94,7 +91,7 @@ fun DetailScreen(
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val sheetState = rememberModalBottomSheetState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()
     var showBottomSheet by remember { mutableStateOf(false) }
     var openPermissionDeniedDialog by remember { mutableStateOf(false) }
@@ -156,7 +153,10 @@ fun DetailScreen(
                                             onConnectToWifi()
                                             showBottomSheet = true
                                         }
-                                        permissionState.shouldShowRationale -> openPermissionDeniedDialog = true
+
+                                        permissionState.shouldShowRationale -> openPermissionDeniedDialog =
+                                            true
+
                                         else -> permissionState.launchMultiplePermissionRequest()
                                     }
                                 }
@@ -246,30 +246,11 @@ fun DetailScreen(
         }
 
         if (showBottomSheet) {
-            ModalBottomSheet(
-                onDismissRequest = { showBottomSheet = false },
-                sheetState = sheetState
-            ) {
-                when (uiState.wifiScanResult) {
-                    StateResult.Loading -> {
-                        CircularProgressIndicator()
-                    }
-                    is StateResult.Success -> {
-                        uiState.wifiScanResult.data.onEach { wifiNetwork ->
-                            Row {
-                                Text(
-                                    text = wifiNetwork.ssid,
-                                )
-
-                                Text(
-                                    text = wifiNetwork.rssi.toString()
-                                )
-                            }
-                        }
-                    }
-                    StateResult.Idle -> {}
-                }
-            }
+            WifiBottomSheet(
+                sheetState = sheetState,
+                wifiScanResult = uiState.wifiScanResult,
+                onDismissRequest = { showBottomSheet = false }
+            )
         }
     }
 }
