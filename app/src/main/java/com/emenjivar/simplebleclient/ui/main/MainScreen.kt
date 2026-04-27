@@ -68,8 +68,6 @@ fun MainScreen(
         onClickDetail = onClickDetail,
         onStartScan = viewModel::startScan,
         onStopScan = viewModel::stopScan,
-        onConnect = viewModel::connect,
-        onDisconnect = viewModel::disconnect
     )
 }
 
@@ -82,8 +80,6 @@ fun MainScreen(
     onClickDetail: (device: BluetoothDevice) -> Unit,
     onStartScan: () -> Unit,
     onStopScan: () -> Unit,
-    onConnect: (device: BluetoothDevice) -> Unit,
-    onDisconnect: () -> Unit
 ) {
     val context = LocalContext.current
     val permissionState = rememberMultiplePermissionsState(permissions = permissions)
@@ -163,18 +159,6 @@ fun MainScreen(
                     modifier = Modifier.padding(horizontal = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-//                    item {
-//                        Text(
-//                            modifier = Modifier.padding(vertical = 20.dp),
-//                            text = when {
-//                                !permissionState.allPermissionsGranted -> "No permissions granted"
-//                                isScanning -> "Scanning..."
-//                                else -> "List of devices"
-//                            },
-//                            style = MaterialTheme.typography.headlineSmall,
-//                        )
-//                    }
-
                     item { Spacer(modifier = Modifier.height(12.dp)) }
 
                     items(uiState.pairedDevices.toList()) { device ->
@@ -196,46 +180,6 @@ fun MainScreen(
                                 onClickDetail(device)
                             }
                         )
-//                    Row(
-//                        verticalAlignment = Alignment.CenterVertically
-//                    ) {
-//                        Column(modifier = Modifier.weight(1f)) {
-//                            Text(
-//                                text = "device: ${device.name}, address: ${device.address}"
-//                            )
-//                        }
-//
-//                        Column {
-//                            Button(
-//                                enabled = uiState.connectionState !is BleConnectionState.Connecting,
-//                                onClick = {
-//                                    if (uiState.connectionState.isConnected()) {
-//                                        onDisconnect()
-//                                    } else {
-//                                        onConnect(device)
-//                                    }
-//                                }
-//                            ) {
-//                                Text(
-//                                    text = if (uiState.connectionState.isConnected()) {
-//                                        "disconnect"
-//                                    } else {
-//                                        "Connect"
-//                                    }
-//                                )
-//                            }
-//
-//                            AnimatedVisibility(
-//                                visible = uiState.connectionState.isConnected()
-//                            ) {
-//                                Button(
-//                                    onClick = { onClickDetail(device.address) }
-//                                ) {
-//                                    Text("Open details")
-//                                }
-//                            }
-//                        }
-//                    }
                     }
                 }
             }
@@ -268,8 +212,6 @@ private fun MainScreenPreview() {
             onClickDetail = {},
             onStartScan = {},
             onStopScan = {},
-            onConnect = {},
-            onDisconnect = {}
         )
     }
 }
