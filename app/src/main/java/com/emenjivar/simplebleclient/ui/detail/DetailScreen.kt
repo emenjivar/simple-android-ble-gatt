@@ -1,5 +1,9 @@
 package com.emenjivar.simplebleclient.ui.detail
 
+import android.Manifest
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -19,15 +23,22 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -35,11 +46,19 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.emenjivar.simplebleclient.R
 import com.emenjivar.simplebleclient.ble.BleConnectionState
 import com.emenjivar.simplebleclient.ble.commands.LEDCommand
+import com.emenjivar.simplebleclient.permission.LocationPermissionDeniedDialog
 import com.emenjivar.simplebleclient.ui.components.PrimaryButton
 import com.emenjivar.simplebleclient.ui.components.SecondaryButton
 import com.emenjivar.simplebleclient.ui.detail.components.DeviceSpecificationItem
 import com.emenjivar.simplebleclient.ui.detail.components.DeviceStatus
 import com.emenjivar.simplebleclient.ui.theme.SimpleBLEClientTheme
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+
+private val permissions = listOf(
+    Manifest.permission.ACCESS_FINE_LOCATION,
+    Manifest.permission.ACCESS_COARSE_LOCATION
+)
 
 @Composable
 fun DetailScreen(
@@ -60,7 +79,7 @@ fun DetailScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun DetailScreen(
     uiState: DetailUiState,
@@ -70,6 +89,20 @@ fun DetailScreen(
     onDisconnectDevice: () -> Unit,
     onNavigateBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val sheetState = rememberModalBottomSheetState()
+    val coroutineScope = rememberCoroutineScope()
+    var showBottomSheet by remember { mutableStateOf(false) }
+    var openPermissionDeniedDialog by remember { mutableStateOf(false) }
+    val permissionState = rememberMultiplePermissionsState(
+        permissions = permissions,
+        onPermissionsResult = { results ->
+            if (results.values.any { !it }) {
+                openPermissionDeniedDialog = true
+            }
+        }
+    )
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -113,7 +146,13 @@ fun DetailScreen(
                                 text = "Connect to WIFI",
                                 icon = R.drawable.ic_wifi,
                                 enabled = enableButton,
-                                onClick = onConnectToWifi
+                                onClick = {
+                                    if (permissionState.allPermissionsGranted) {
+                                        showBottomSheet = true
+                                    } else {
+                                        permissionState.launchMultiplePermissionRequest()
+                                    }
+                                }
                             )
                             SecondaryButton(
                                 modifier = Modifier.fillMaxWidth(),
@@ -182,6 +221,31 @@ fun DetailScreen(
                 ) {
                     Text(text = if (uiState.ledState == LEDCommand.ON) "Turn OFF" else "Turn ON")
                 }
+            }
+        }
+
+        if (openPermissionDeniedDialog) {
+            LocationPermissionDeniedDialog(
+                onDismissRequest = { openPermissionDeniedDialog = false },
+                openSettings = {
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", context.packageName, null)
+                    }
+
+                    context.startActivity(intent)
+                    openPermissionDeniedDialog = false
+                }
+            )
+        }
+
+        if (showBottomSheet) {
+            ModalBottomSheet(
+                onDismissRequest = {
+                    showBottomSheet = false
+                },
+                sheetState = sheetState
+            ) {
+                Text("Show here the list of networks")
             }
         }
     }
