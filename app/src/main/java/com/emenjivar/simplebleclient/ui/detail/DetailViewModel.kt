@@ -83,7 +83,10 @@ class DetailViewModel @AssistedInject constructor(
         customBluetoothManager.writeCharacteristic(WriteLedStatus, state)
     }
 
-    fun connect(device: BluetoothDevice) = customBluetoothManager.connect(device)
+    private fun connect(device: BluetoothDevice) = customBluetoothManager.connect(device)
+
+    fun connect() = connect(route.device)
+
     fun disconnect() = customBluetoothManager.disconnect()
 
     override fun onCleared() {

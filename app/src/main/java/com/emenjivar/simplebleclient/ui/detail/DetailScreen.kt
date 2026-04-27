@@ -25,13 +25,17 @@ import androidx.compose.runtime.Composable
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.emenjivar.simplebleclient.R
+import com.emenjivar.simplebleclient.ble.BleConnectionState
 import com.emenjivar.simplebleclient.ble.commands.LEDCommand
+import com.emenjivar.simplebleclient.ui.components.PrimaryButton
+import com.emenjivar.simplebleclient.ui.components.SecondaryButton
 import com.emenjivar.simplebleclient.ui.theme.SimpleBLEClientTheme
 
 @Composable
@@ -46,6 +50,8 @@ fun DetailScreen(
     DetailScreen(
         uiState = uiState,
         onUpdateLedState = viewModel::updateLedState,
+        onConnectDevice = viewModel::connect,
+        onDisconnectDevice = viewModel::disconnect,
         onNavigateBack = onNavigateBack
     )
 }
@@ -55,6 +61,8 @@ fun DetailScreen(
 fun DetailScreen(
    uiState: DetailUiState,
    onUpdateLedState: (LEDCommand) -> Unit,
+   onConnectDevice: () -> Unit,
+   onDisconnectDevice: () -> Unit,
    onNavigateBack: () -> Unit
 ) {
     Scaffold(
@@ -81,22 +89,36 @@ fun DetailScreen(
             )
         },
         bottomBar = {
-            Button(
-                modifier = Modifier
-                    .navigationBarsPadding()
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                onClick = {}
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_disconnect),
-                        contentDescription = "Disconnect"
+            when (uiState.connectionState) {
+                is BleConnectionState.Connected -> {
+                    val enableButton = remember(uiState.connectionState) {
+                        uiState.connectionState.isConnected()
+                    }
+                    SecondaryButton(
+                        modifier = Modifier
+                            .navigationBarsPadding()
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        text = "Disconnect",
+                        icon = R.drawable.ic_disconnect,
+                        enabled = enableButton,
+                        onClick = onDisconnectDevice
                     )
-                    Text(text = "Disconnect")
+                }
+                else -> {
+                    val enableButton = remember(uiState.connectionState) {
+                        uiState.connectionState == BleConnectionState.Disconnected || uiState.connectionState == BleConnectionState.Failed
+                    }
+                    PrimaryButton(
+                        modifier = Modifier
+                            .navigationBarsPadding()
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        text = "Connect",
+                        icon = R.drawable.ic_connect,
+                        enabled = enableButton,
+                        onClick = onConnectDevice
+                    )
                 }
             }
         }
@@ -151,7 +173,9 @@ private fun DetailScreenPreview() {
     SimpleBLEClientTheme {
         DetailScreen(
             uiState = DetailUiState(),
+            onConnectDevice = {},
             onUpdateLedState = {},
+            onDisconnectDevice = {},
             onNavigateBack = {}
         )
     }
