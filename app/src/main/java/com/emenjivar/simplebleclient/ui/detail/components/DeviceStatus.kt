@@ -1,4 +1,4 @@
-package com.emenjivar.simplebleclient.ui.detail
+package com.emenjivar.simplebleclient.ui.detail.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement

@@ -1,4 +1,4 @@
-package com.emenjivar.simplebleclient.ui.main
+package com.emenjivar.simplebleclient.ui.main.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row

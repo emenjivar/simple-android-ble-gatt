@@ -37,6 +37,8 @@ import com.emenjivar.simplebleclient.ble.BleConnectionState
 import com.emenjivar.simplebleclient.ble.commands.LEDCommand
 import com.emenjivar.simplebleclient.ui.components.PrimaryButton
 import com.emenjivar.simplebleclient.ui.components.SecondaryButton
+import com.emenjivar.simplebleclient.ui.detail.components.DeviceSpecificationItem
+import com.emenjivar.simplebleclient.ui.detail.components.DeviceStatus
 import com.emenjivar.simplebleclient.ui.theme.SimpleBLEClientTheme
 
 @Composable
