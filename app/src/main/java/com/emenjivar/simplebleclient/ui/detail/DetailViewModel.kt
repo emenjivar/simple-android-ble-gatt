@@ -1,5 +1,6 @@
 package com.emenjivar.simplebleclient.ui.detail
 
+import android.bluetooth.BluetoothDevice
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.emenjivar.simplebleclient.ble.BleConnectionState
@@ -31,7 +32,12 @@ class DetailViewModel @AssistedInject constructor(
 ) : ViewModel() {
 
     // TODO: use backing fields here
-    private val _uiState = MutableStateFlow(DetailUiState(macAddress = route.macAddress))
+    private val _uiState = MutableStateFlow(
+        DetailUiState(
+            macAddress = route.device.address,
+            deviceName = route.device.name
+        )
+    )
     val uiState: StateFlow<DetailUiState> = _uiState.asStateFlow()
 
     // Assuming a connected device
@@ -45,6 +51,8 @@ class DetailViewModel @AssistedInject constructor(
         .onStart { emit(LEDCommand.OFF) }
 
     init {
+        connect(route.device)
+
         // Read characteristics when connection is ready
         connectionState.onEach { state ->
             if (state is BleConnectionState.Connected && state.ready) {
@@ -54,12 +62,18 @@ class DetailViewModel @AssistedInject constructor(
         }.launchIn(viewModelScope)
 
         // Listed BLE responses and updated uiState
-        combine(ipAddress, ssid, ledState) { ipAddress, ssid, ledState ->
+        combine(
+            ipAddress,
+            ssid,
+            ledState,
+            connectionState
+        ) { ipAddress, ssid, ledState, connectionState ->
             _uiState.update {
                 it.copy(
                     ipAddress = ipAddress,
                     ssid = ssid,
-                    ledState = ledState
+                    ledState = ledState,
+                    connectionState = connectionState
                 )
             }
         }.launchIn(viewModelScope)
@@ -67,6 +81,16 @@ class DetailViewModel @AssistedInject constructor(
 
     fun updateLedState(state: LEDCommand) {
         customBluetoothManager.writeCharacteristic(WriteLedStatus, state)
+    }
+
+    private fun connect(device: BluetoothDevice) = customBluetoothManager.connect(device)
+
+    fun connect() = connect(route.device)
+
+    fun disconnect() = customBluetoothManager.disconnect()
+
+    override fun onCleared() {
+        disconnect()
     }
 
     @AssistedFactory
