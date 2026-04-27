@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,7 +33,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,12 +53,15 @@ import com.emenjivar.simplebleclient.ui.components.SecondaryButton
 import com.emenjivar.simplebleclient.ui.detail.components.DeviceSpecificationItem
 import com.emenjivar.simplebleclient.ui.detail.components.DeviceStatus
 import com.emenjivar.simplebleclient.ui.theme.SimpleBLEClientTheme
+import com.emenjivar.simplebleclient.wifi.StateResult
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
 private val permissions = listOf(
     Manifest.permission.ACCESS_FINE_LOCATION,
-    Manifest.permission.ACCESS_COARSE_LOCATION
+    Manifest.permission.ACCESS_COARSE_LOCATION,
+    Manifest.permission.CHANGE_WIFI_STATE,
+    Manifest.permission.ACCESS_WIFI_STATE
 )
 
 @Composable
@@ -73,7 +77,7 @@ fun DetailScreen(
         uiState = uiState,
         onUpdateLedState = viewModel::updateLedState,
         onConnectDevice = viewModel::connect,
-        onConnectToWifi = {},
+        onConnectToWifi = viewModel::scanWifiNetworks,
         onDisconnectDevice = viewModel::disconnect,
         onNavigateBack = onNavigateBack
     )
@@ -147,10 +151,13 @@ fun DetailScreen(
                                 icon = R.drawable.ic_wifi,
                                 enabled = enableButton,
                                 onClick = {
-                                    if (permissionState.allPermissionsGranted) {
-                                        showBottomSheet = true
-                                    } else {
-                                        permissionState.launchMultiplePermissionRequest()
+                                    when {
+                                        permissionState.allPermissionsGranted -> {
+                                            onConnectToWifi()
+                                            showBottomSheet = true
+                                        }
+                                        permissionState.shouldShowRationale -> openPermissionDeniedDialog = true
+                                        else -> permissionState.launchMultiplePermissionRequest()
                                     }
                                 }
                             )
@@ -240,12 +247,28 @@ fun DetailScreen(
 
         if (showBottomSheet) {
             ModalBottomSheet(
-                onDismissRequest = {
-                    showBottomSheet = false
-                },
+                onDismissRequest = { showBottomSheet = false },
                 sheetState = sheetState
             ) {
-                Text("Show here the list of networks")
+                when (uiState.wifiScanResult) {
+                    StateResult.Loading -> {
+                        CircularProgressIndicator()
+                    }
+                    is StateResult.Success -> {
+                        uiState.wifiScanResult.data.onEach { wifiNetwork ->
+                            Row {
+                                Text(
+                                    text = wifiNetwork.ssid,
+                                )
+
+                                Text(
+                                    text = wifiNetwork.rssi.toString()
+                                )
+                            }
+                        }
+                    }
+                    StateResult.Idle -> {}
+                }
             }
         }
     }
