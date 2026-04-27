@@ -1,5 +1,10 @@
 package com.emenjivar.simplebleclient.ui.detail
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.AnimationState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -51,6 +56,7 @@ fun DetailScreen(
         uiState = uiState,
         onUpdateLedState = viewModel::updateLedState,
         onConnectDevice = viewModel::connect,
+        onConnectToWifi = {},
         onDisconnectDevice = viewModel::disconnect,
         onNavigateBack = onNavigateBack
     )
@@ -62,6 +68,7 @@ fun DetailScreen(
    uiState: DetailUiState,
    onUpdateLedState: (LEDCommand) -> Unit,
    onConnectDevice: () -> Unit,
+   onConnectToWifi: () -> Unit,
    onDisconnectDevice: () -> Unit,
    onNavigateBack: () -> Unit
 ) {
@@ -89,36 +96,48 @@ fun DetailScreen(
             )
         },
         bottomBar = {
-            when (uiState.connectionState) {
-                is BleConnectionState.Connected -> {
-                    val enableButton = remember(uiState.connectionState) {
-                        uiState.connectionState.isConnected()
+            AnimatedContent(
+                modifier = Modifier
+                    .navigationBarsPadding()
+                    .padding(20.dp),
+                targetState = uiState.connectionState,
+                transitionSpec = { fadeIn().togetherWith(fadeOut()) }
+            ) { connectionState ->
+                when (uiState.connectionState) {
+                    is BleConnectionState.Connected -> {
+                        val enableButton = remember(uiState.connectionState) {
+                            uiState.connectionState.isConnected()
+                        }
+
+                        Column {
+                            PrimaryButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                text = "Connect to WIFI",
+                                icon = R.drawable.ic_wifi,
+                                enabled = enableButton,
+                                onClick = onConnectToWifi
+                            )
+                            SecondaryButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                text = "Disconnect",
+                                icon = R.drawable.ic_disconnect,
+                                enabled = enableButton,
+                                onClick = onDisconnectDevice
+                            )
+                        }
                     }
-                    SecondaryButton(
-                        modifier = Modifier
-                            .navigationBarsPadding()
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        text = "Disconnect",
-                        icon = R.drawable.ic_disconnect,
-                        enabled = enableButton,
-                        onClick = onDisconnectDevice
-                    )
-                }
-                else -> {
-                    val enableButton = remember(uiState.connectionState) {
-                        uiState.connectionState == BleConnectionState.Disconnected || uiState.connectionState == BleConnectionState.Failed
+                    else -> {
+                        val enableButton = remember(uiState.connectionState) {
+                            uiState.connectionState == BleConnectionState.Disconnected || uiState.connectionState == BleConnectionState.Failed
+                        }
+                        PrimaryButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            text = "Connect",
+                            icon = R.drawable.ic_connect,
+                            enabled = enableButton,
+                            onClick = onConnectDevice
+                        )
                     }
-                    PrimaryButton(
-                        modifier = Modifier
-                            .navigationBarsPadding()
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        text = "Connect",
-                        icon = R.drawable.ic_connect,
-                        enabled = enableButton,
-                        onClick = onConnectDevice
-                    )
                 }
             }
         }
@@ -173,8 +192,9 @@ private fun DetailScreenPreview() {
     SimpleBLEClientTheme {
         DetailScreen(
             uiState = DetailUiState(),
-            onConnectDevice = {},
             onUpdateLedState = {},
+            onConnectDevice = {},
+            onConnectToWifi = {},
             onDisconnectDevice = {},
             onNavigateBack = {}
         )
