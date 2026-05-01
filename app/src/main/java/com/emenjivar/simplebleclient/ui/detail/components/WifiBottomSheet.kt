@@ -2,17 +2,19 @@ package com.emenjivar.simplebleclient.ui.detail.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
@@ -62,39 +64,43 @@ fun WifiBottomSheetLayout(
         modifier = modifier,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
+        ),
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp)
-        ) {
-            Text(
-                text = "Select Wi-Fi Network",
-                style = MaterialTheme.typography.titleLarge
-            )
-            Text(
-                text = if(wifiScanResult is StateResult.Success) {
-                    "Choose a network for your device"
-                } else {
-                    "Scanning wifi networks..."
-                },
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Spacer(modifier = Modifier.height(20.dp))
+        LazyColumn(modifier = Modifier.padding(20.dp)) {
+            item {
+                Text(
+                    text = "Select Wi-Fi Network",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Text(
+                    text = if(wifiScanResult is StateResult.Success) {
+                        "Choose a network for your device"
+                    } else {
+                        "Scanning wifi networks..."
+                    },
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+            }
 
             when (wifiScanResult) {
                 StateResult.Loading -> {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     }
                 }
                 is StateResult.Success -> {
-                    wifiScanResult.data.onEach { wifiNetwork ->
+                    itemsIndexed(wifiScanResult.data) { index, wifiNetwork ->
                         WifiNetworkItem(
-                            modifier = Modifier.padding(bottom = 8.dp),
-                            wifiNetwork = wifiNetwork
+                            modifier = Modifier
+                                .padding(bottom = 8.dp),
+                            wifiNetwork = wifiNetwork,
+                            onClick = {}
                         )
                     }
                 }
@@ -107,22 +113,36 @@ fun WifiBottomSheetLayout(
 @Composable
 private fun WifiNetworkItem(
     wifiNetwork: WifiNetwork,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
 ) {
-    Row(
+    Card(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        onClick = onClick
     ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_wifi),
-            contentDescription = null
-        )
+        Row(
+            modifier = Modifier.padding(start = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_wifi),
+                contentDescription = null
+            )
 
-        Text(
-            text = wifiNetwork.ssid,
-            style = MaterialTheme.typography.bodyLarge
-        )
+            Text(
+                modifier = Modifier.weight(1f),
+                text = wifiNetwork.ssid,
+                style = MaterialTheme.typography.bodyLarge
+            )
+
+            IconButton(onClick = {}) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_arrow_right),
+                    contentDescription = null
+                )
+            }
+        }
     }
 }
 
