@@ -1,7 +1,9 @@
 package com.emenjivar.simplebleclient.ui.detail.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,6 +11,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicSecureTextField
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.TextObfuscationMode
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -19,15 +27,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.emenjivar.simplebleclient.R
+import com.emenjivar.simplebleclient.ui.components.PrimaryButton
 import com.emenjivar.simplebleclient.ui.theme.SimpleBLEClientTheme
 import com.emenjivar.simplebleclient.wifi.StateResult
 import com.emenjivar.simplebleclient.wifi.WifiNetwork
@@ -60,52 +75,159 @@ fun WifiBottomSheetLayout(
      wifiScanResult: StateResult<List<WifiNetwork>>,
      modifier: Modifier = Modifier
 ) {
+    HorizontalPager(state = rememberPagerState { 2 }) { page ->
+        when (page) {
+            0 -> {
+                Card(
+                    modifier = modifier,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    ),
+                ) {
+                    LazyColumn(modifier = Modifier.padding(20.dp)) {
+                        item {
+                            Text(
+                                text = "Select Wi-Fi Network",
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                            Text(
+                                text = if(wifiScanResult is StateResult.Success) {
+                                    "Choose a network for your device"
+                                } else {
+                                    "Scanning wifi networks..."
+                                },
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Spacer(modifier = Modifier.height(20.dp))
+                        }
+
+                        when (wifiScanResult) {
+                            StateResult.Loading -> {
+                                item {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator()
+                                    }
+                                }
+                            }
+                            is StateResult.Success -> {
+                                itemsIndexed(wifiScanResult.data) { index, wifiNetwork ->
+                                    WifiNetworkItem(
+                                        modifier = Modifier
+                                            .padding(bottom = 8.dp),
+                                        wifiNetwork = wifiNetwork,
+                                        onClick = {}
+                                    )
+                                }
+                            }
+                            StateResult.Idle -> {}
+                        }
+                    }
+
+                }
+
+            }
+            1 -> {
+                EnterWifiPasswordLayout(
+                    ssid = "Charlie network",
+                    onClickConnect = {}
+                )
+            }
+        }
+
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EnterWifiPasswordLayout(
+    ssid: String,
+    modifier: Modifier = Modifier,
+    onClickConnect: () -> Unit
+) {
+    var showPassword by remember { mutableStateOf(false) }
+    val passwordState = remember { TextFieldState("") }
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
     ) {
-        LazyColumn(modifier = Modifier.padding(20.dp)) {
-            item {
+        TopAppBar(
+            title = {
                 Text(
-                    text = "Select Wi-Fi Network",
+                    text = "Enter Wi-Fi Password",
                     style = MaterialTheme.typography.titleLarge
                 )
-                Text(
-                    text = if(wifiScanResult is StateResult.Success) {
-                        "Choose a network for your device"
-                    } else {
-                        "Scanning wifi networks..."
-                    },
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-            }
+            },
+            navigationIcon = {
+                IconButton(
+                    onClick = {}
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_arrow_back),
+                        contentDescription = null
+                    )
+                }
+            },
+        )
 
-            when (wifiScanResult) {
-                StateResult.Loading -> {
-                    item {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
+        Column(modifier = Modifier.padding(20.dp)) {
+            ConnectedWifiItem(
+                modifier = Modifier.fillMaxWidth(),
+                ssid = ssid
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text(
+                text = "Password",
+                style = MaterialTheme.typography.bodySmall
+            )
+            BasicSecureTextField(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(horizontal = 10.dp),
+                state = passwordState,
+                textObfuscationMode = if (showPassword) {
+                    TextObfuscationMode.Visible
+                } else {
+                    TextObfuscationMode.RevealLastTyped
+                },
+                decorator = { innerTextField ->
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
+                        innerTextField()
+
+                        IconButton(
+                            modifier = Modifier.align(Alignment.CenterEnd),
+                            onClick = {
+                                showPassword = !showPassword
+                            }
                         ) {
-                            CircularProgressIndicator()
+                            Icon(
+                                painter = painterResource(
+                                    if (showPassword) R.drawable.ic_eye
+                                    else R.drawable.ic_eye_off
+                                ),
+                                contentDescription = null
+                            )
                         }
                     }
                 }
-                is StateResult.Success -> {
-                    itemsIndexed(wifiScanResult.data) { index, wifiNetwork ->
-                        WifiNetworkItem(
-                            modifier = Modifier
-                                .padding(bottom = 8.dp),
-                            wifiNetwork = wifiNetwork,
-                            onClick = {}
-                        )
-                    }
-                }
-                StateResult.Idle -> {}
-            }
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            PrimaryButton(
+                modifier = Modifier.fillMaxWidth(),
+                text = "Connect",
+                icon = R.drawable.ic_wifi,
+                onClick = {}
+            )
         }
     }
 }
@@ -146,6 +268,36 @@ private fun WifiNetworkItem(
     }
 }
 
+@Composable
+private fun ConnectedWifiItem(
+    ssid: String,
+    modifier: Modifier = Modifier
+) {
+    Card(modifier = modifier) {
+        Row(
+            modifier = Modifier.padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_wifi),
+                contentDescription = null
+            )
+
+            Column {
+                Text(
+                    "Connected to:",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = ssid,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        }
+    }
+}
+
 @Preview
 @Composable
 private fun WifiBottomSheetLoadingPreview() {
@@ -169,6 +321,17 @@ private fun WifiBottomSheetPreview() {
                     WifiNetwork(ssid = "Coffee shop free", rssi = -10),
                 )
             )
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun EnterWifiPasswordLayoutPreview() {
+    SimpleBLEClientTheme {
+        EnterWifiPasswordLayout(
+            ssid = "Charlie network",
+            onClickConnect = {}
         )
     }
 }
