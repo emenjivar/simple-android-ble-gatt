@@ -291,6 +291,9 @@ private fun WifiNetworkItem(
     onClick: () -> Unit
 ) {
     Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
         modifier = modifier,
         onClick = onClick
     ) {
@@ -325,7 +328,12 @@ private fun ConnectedWifiItem(
     ssid: String,
     modifier: Modifier = Modifier
 ) {
-    Card(modifier = modifier) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        modifier = modifier
+    ) {
         Row(
             modifier = Modifier.padding(8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
