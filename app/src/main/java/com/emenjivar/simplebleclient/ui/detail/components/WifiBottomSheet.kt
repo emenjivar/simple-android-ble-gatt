@@ -28,12 +28,14 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +48,7 @@ import com.emenjivar.simplebleclient.ui.components.PrimaryButton
 import com.emenjivar.simplebleclient.ui.theme.SimpleBLEClientTheme
 import com.emenjivar.simplebleclient.wifi.StateResult
 import com.emenjivar.simplebleclient.wifi.WifiNetwork
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,6 +62,7 @@ fun WifiBottomSheet(
     ModalBottomSheet(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        // dragHandle = null,
         onDismissRequest = onDismissRequest,
         sheetState = sheetState
     ) {
@@ -69,13 +73,21 @@ fun WifiBottomSheet(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @Stable
 fun WifiBottomSheetLayout(
      wifiScanResult: StateResult<List<WifiNetwork>>,
      modifier: Modifier = Modifier
 ) {
-    HorizontalPager(state = rememberPagerState { 2 }) { page ->
+    val pagerState = rememberPagerState { 2 }
+    var selectedWifi by remember { mutableStateOf<WifiNetwork?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    HorizontalPager(
+        state = pagerState,
+        userScrollEnabled = false
+    ) { page ->
         when (page) {
             0 -> {
                 Card(
@@ -84,7 +96,7 @@ fun WifiBottomSheetLayout(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer
                     ),
                 ) {
-                    LazyColumn(modifier = Modifier.padding(20.dp)) {
+                    LazyColumn(modifier = Modifier.padding(horizontal = 20.dp)) {
                         item {
                             Text(
                                 text = "Select Wi-Fi Network",
@@ -118,8 +130,18 @@ fun WifiBottomSheetLayout(
                                         modifier = Modifier
                                             .padding(bottom = 8.dp),
                                         wifiNetwork = wifiNetwork,
-                                        onClick = {}
+                                        onClick = {
+                                            coroutineScope.launch {
+                                                selectedWifi = wifiNetwork
+                                                pagerState.animateScrollToPage(1)
+                                            }
+                                        }
                                     )
+                                }
+
+                                item {
+                                    // Extra space for scrolling
+                                    Spacer(modifier = Modifier.height(20.dp))
                                 }
                             }
                             StateResult.Idle -> {}
@@ -131,8 +153,14 @@ fun WifiBottomSheetLayout(
             }
             1 -> {
                 EnterWifiPasswordLayout(
-                    ssid = "Charlie network",
-                    onClickConnect = {}
+                    ssid = selectedWifi?.ssid.orEmpty(),
+                    onBackClick = {
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(0)
+                            selectedWifi = null
+                        }
+                    },
+                    onConnectClick = {}
                 )
             }
         }
@@ -145,7 +173,8 @@ fun WifiBottomSheetLayout(
 private fun EnterWifiPasswordLayout(
     ssid: String,
     modifier: Modifier = Modifier,
-    onClickConnect: () -> Unit
+    onConnectClick: () -> Unit,
+    onBackClick: () -> Unit
 ) {
     var showPassword by remember { mutableStateOf(false) }
     val passwordState = remember { TextFieldState("") }
@@ -156,6 +185,10 @@ private fun EnterWifiPasswordLayout(
         ),
     ) {
         TopAppBar(
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
+            ),
+            expandedHeight = 48.dp,
             title = {
                 Text(
                     text = "Enter Wi-Fi Password",
@@ -164,7 +197,7 @@ private fun EnterWifiPasswordLayout(
             },
             navigationIcon = {
                 IconButton(
-                    onClick = {}
+                    onClick = onBackClick
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_arrow_back),
@@ -226,7 +259,7 @@ private fun EnterWifiPasswordLayout(
                 modifier = Modifier.fillMaxWidth(),
                 text = "Connect",
                 icon = R.drawable.ic_wifi,
-                onClick = {}
+                onClick = onConnectClick
             )
         }
     }
@@ -331,7 +364,8 @@ private fun EnterWifiPasswordLayoutPreview() {
     SimpleBLEClientTheme {
         EnterWifiPasswordLayout(
             ssid = "Charlie network",
-            onClickConnect = {}
+            onConnectClick = {},
+            onBackClick = {}
         )
     }
 }
