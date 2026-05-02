@@ -85,71 +85,21 @@ fun WifiBottomSheetLayout(
     val coroutineScope = rememberCoroutineScope()
 
     HorizontalPager(
+        modifier = modifier,
         state = pagerState,
         userScrollEnabled = false
     ) { page ->
         when (page) {
             0 -> {
-                Card(
-                    modifier = modifier,
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    ),
-                ) {
-                    LazyColumn(modifier = Modifier.padding(horizontal = 20.dp)) {
-                        item {
-                            Text(
-                                text = "Select Wi-Fi Network",
-                                style = MaterialTheme.typography.titleLarge
-                            )
-                            Text(
-                                text = if(wifiScanResult is StateResult.Success) {
-                                    "Choose a network for your device"
-                                } else {
-                                    "Scanning wifi networks..."
-                                },
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Spacer(modifier = Modifier.height(20.dp))
-                        }
-
-                        when (wifiScanResult) {
-                            StateResult.Loading -> {
-                                item {
-                                    Box(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        CircularProgressIndicator()
-                                    }
-                                }
-                            }
-                            is StateResult.Success -> {
-                                itemsIndexed(wifiScanResult.data) { index, wifiNetwork ->
-                                    WifiNetworkItem(
-                                        modifier = Modifier
-                                            .padding(bottom = 8.dp),
-                                        wifiNetwork = wifiNetwork,
-                                        onClick = {
-                                            coroutineScope.launch {
-                                                selectedWifi = wifiNetwork
-                                                pagerState.animateScrollToPage(1)
-                                            }
-                                        }
-                                    )
-                                }
-
-                                item {
-                                    // Extra space for scrolling
-                                    Spacer(modifier = Modifier.height(20.dp))
-                                }
-                            }
-                            StateResult.Idle -> {}
+                SelectWifiLayout(
+                    wifiScanResult = wifiScanResult,
+                    onNetworkClick = { wifiNetwork ->
+                        coroutineScope.launch {
+                            selectedWifi = wifiNetwork
+                            pagerState.animateScrollToPage(1)
                         }
                     }
-
-                }
-
+                )
             }
             1 -> {
                 EnterWifiPasswordLayout(
@@ -162,6 +112,75 @@ fun WifiBottomSheetLayout(
                     },
                     onConnectClick = {}
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SelectWifiLayout(
+    wifiScanResult: StateResult<List<WifiNetwork>>,
+    modifier: Modifier = Modifier,
+    onNetworkClick: (WifiNetwork) -> Unit
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        ),
+    ) {
+        LazyColumn(modifier = Modifier.padding(horizontal = 20.dp)) {
+            item {
+                Text(
+                    text = "Select Wi-Fi Network",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Text(
+                    text = if(wifiScanResult is StateResult.Success) {
+                        "Choose a network for your device"
+                    } else {
+                        "Scanning wifi networks..."
+                    },
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+            }
+
+            when (wifiScanResult) {
+                StateResult.Loading -> {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                }
+                is StateResult.Success -> {
+                    itemsIndexed(wifiScanResult.data) { index, wifiNetwork ->
+                        WifiNetworkItem(
+                            modifier = Modifier
+                                .padding(bottom = 8.dp),
+                            wifiNetwork = wifiNetwork,
+                            onClick = {
+                                onNetworkClick(wifiNetwork)
+                            }
+                                // {
+                                // coroutineScope.launch {
+                                //     selectedWifi = wifiNetwork
+                                //     pagerState.animateScrollToPage(1)
+                                // }
+                                //}
+                        )
+                    }
+
+                    item {
+                        // Extra space for scrolling
+                        Spacer(modifier = Modifier.height(20.dp))
+                    }
+                }
+                StateResult.Idle -> {}
             }
         }
 
