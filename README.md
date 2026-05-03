@@ -1,32 +1,37 @@
-# Simple android ble GATT client
-Python GATT server on Rasperry Pi and Android client to control a LED over BLE.
+# Raspberry Pi BLE Commissioning
 
-## Features
-- Python GATT server running on a Raspberry Pi via `bluezero`
-- Android app to scan, connect and send LED on/off commands via BLE
-- systemd service for auto-start gatt server on boot
+An Android application paired with a Python GATT server for commissioning a Raspberry Pi over BLE. The app connects to the Pi to read its current network information and configure Wi-Fi credentials, making it possible to set up headless devices without a monitor or keyboard.
+
+## Demo
+
+Video coming soon (in progress).
 
 ## Architecture
+
 ```mermaid
 graph LR
-android[Android client]
-raspberry[Raspberry PI]
-led[LED]
+android[Android Client]
+raspberry[Raspberry Pi]
+wifi[Wi-Fi Network]
 
 android -- BLE --> raspberry
-raspberry -- GPIO --> led
+raspberry -- joins --> wifi
 ```
 
-## Rapsberry Pi
+## Raspberry Pi
+
+The GATT server is written in Python using `bluezero` and exposes three characteristics: the current IP address, the connected Wi-Fi network name, and a writable characteristic for sending Wi-Fi credentials.
+
 ### Prerequisites
+
 ```bash
 sudo apt install libcairo2-dev -y
 sudo apt install libgirepository1.0-dev -y
 sudo apt install libdbus-1-dev -y
-
 ```
 
 ### Setup virtual environment
+
 ```bash
 python3 -m venv ~/venv_bluetooth --system-site-packages
 source ~/venv_bluetooth/bin/activate
@@ -34,32 +39,34 @@ pip install bluezero
 ```
 
 ### Running the server
+
 ```bash
 source ~/venv_bluetooth/bin/activate
 python3 gatt_server.py
 ```
 
-> To exit the virtual environment, run `deactivate`
+To exit the virtual environment, run `deactivate`.
 
 ### Auto-start on boot (systemd)
+
 Create a service file:
+
 ```bash
 sudo vim /etc/systemd/system/gatt_server.service
 ```
 
-Paster the following, **replacing `<user>` and `<path>` with your username and script directory**:
+Paste the following, replacing `<user>` and `<path>` with your username and script directory:
 
 ```ini
 [Unit]
 Description=GATT server BLE
-# Wait for bluetooth and network before starting
 After=network.target bluetooth.target
 
 [Service]
 Type=simple
 User=<user>
 WorkingDirectory=<path>
-ExecStart=/home/charlie/venv_bluetooth/bin/python3 <path>/gatt_server.py
+ExecStart=/home/<user>/venv_bluetooth/bin/python3 <path>/gatt_server.py
 Restart=on-failure
 
 [Install]
@@ -67,19 +74,22 @@ WantedBy=multi-user.target
 ```
 
 Enable and start the service:
+
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable gatt_server.service
 sudo systemctl start gatt_server.service
 ```
 
-Verify it's running:
+Verify it is running:
+
 ```bash
 sudo systemctl status gatt_server.service
 ```
 
 ## Android
-The app follows an unidirectional data flow:
+
+The app follows unidirectional data flow. The screen dispatches user actions to the ViewModel, which delegates BLE writes to a custom Bluetooth manager. Incoming notifications are resolved against known UUIDs and propagated back up to the UI as state updates.
 
 ```mermaid
 sequenceDiagram
@@ -88,8 +98,8 @@ sequenceDiagram
     participant bleManager as CustomBluetoothManager
     participant bleNotif as BleNotification
 
-    screen ->> vm: Toggle LED button
-    vm ->> bleManager: Send command + value
+    screen ->> vm: User action
+    vm ->> bleManager: Send command
     bleManager ->> bleManager: Write to GATT
     bleManager ->> bleNotif: Emit notification
     bleNotif ->> bleNotif: Resolve command from UUIDs
