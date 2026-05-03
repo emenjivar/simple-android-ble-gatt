@@ -1,6 +1,12 @@
 package com.emenjivar.simplebleclient.ui.detail
 
+import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.net.wifi.WifiManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.emenjivar.simplebleclient.ble.BleConnectionState
@@ -11,10 +17,13 @@ import com.emenjivar.simplebleclient.ble.commands.GetSSID
 import com.emenjivar.simplebleclient.ble.commands.LEDCommand
 import com.emenjivar.simplebleclient.ble.commands.ReadLedStatus
 import com.emenjivar.simplebleclient.ble.commands.WriteLedStatus
+import com.emenjivar.simplebleclient.wifi.StateResult
+import com.emenjivar.simplebleclient.wifi.WifiNetwork
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,6 +35,7 @@ import kotlinx.coroutines.flow.update
 
 @HiltViewModel(assistedFactory = DetailViewModel.Factory::class)
 class DetailViewModel @AssistedInject constructor(
+    @ApplicationContext private val context: Context,
     private val customBluetoothManager: CustomBluetoothManager,
     @Assisted private val route: DetailRoute,
     bleNotifications: BleNotifications,
@@ -88,6 +98,35 @@ class DetailViewModel @AssistedInject constructor(
     fun connect() = connect(route.device)
 
     fun disconnect() = customBluetoothManager.disconnect()
+
+    @SuppressLint("MissingPermission")
+    fun scanWifiNetworks() {
+        _uiState.update { it.copy(wifiScanResult = StateResult.Loading) }
+        val wifiManager = context.getSystemService(WifiManager::class.java)
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context, intent: Intent) {
+                @Suppress("DEPRECATION")
+                val networks = wifiManager.scanResults
+                    .filter { it.SSID.isNotEmpty() }
+                    .map { result ->
+                        WifiNetwork(
+                            ssid = result.SSID,
+                            rssi = result.level
+                        )
+                    }.sortedByDescending { it.rssi }
+
+                _uiState.update {
+                    it.copy(
+                        wifiScanResult = StateResult.Success(networks)
+                    )
+                }
+                ctx.unregisterReceiver(this)
+            }
+        }
+        context.registerReceiver(receiver, IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION))
+        @Suppress("DEPRECATION")
+        wifiManager.startScan()
+    }
 
     override fun onCleared() {
         disconnect()

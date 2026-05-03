@@ -191,7 +191,6 @@ fun MainScreen(
         PermissionDeniedDialog(
             onDismissRequest = { openPermissionDeniedDialog.value = false },
             openSettings = {
-                Settings.ACTION_MANAGE_OVERLAY_PERMISSION
                 val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                     data = Uri.fromParts("package", context.packageName, null)
                 }
