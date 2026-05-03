@@ -54,6 +54,7 @@ import com.emenjivar.simplebleclient.ui.detail.components.WifiBottomSheet
 import com.emenjivar.simplebleclient.ui.theme.SimpleBLEClientTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import kotlinx.coroutines.launch
 
 private val permissions = listOf(
     Manifest.permission.ACCESS_FINE_LOCATION,
@@ -92,8 +93,10 @@ fun DetailScreen(
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    )
     var showBottomSheet by remember { mutableStateOf(false) }
     var openPermissionDeniedDialog by remember { mutableStateOf(false) }
     val permissionState = rememberMultiplePermissionsState(
@@ -251,7 +254,12 @@ fun DetailScreen(
                 modifier = Modifier.statusBarsPadding(),
                 sheetState = sheetState,
                 wifiScanResult = uiState.wifiScanResult,
-                onDismissRequest = { showBottomSheet = false }
+                onDismissRequest = {
+                    coroutineScope.launch {
+                        sheetState.hide()
+                        showBottomSheet = false
+                    }
+                }
             )
         }
     }

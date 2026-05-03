@@ -63,13 +63,14 @@ fun WifiBottomSheet(
     ModalBottomSheet(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        // dragHandle = null,
+        dragHandle = null,
         onDismissRequest = onDismissRequest,
         sheetState = sheetState
     ) {
         WifiBottomSheetLayout(
             modifier = Modifier.fillMaxWidth(),
-            wifiScanResult = wifiScanResult
+            wifiScanResult = wifiScanResult,
+            onDismissRequest = onDismissRequest
         )
     }
 }
@@ -79,7 +80,8 @@ fun WifiBottomSheet(
 @Stable
 fun WifiBottomSheetLayout(
      wifiScanResult: StateResult<List<WifiNetwork>>,
-     modifier: Modifier = Modifier
+     modifier: Modifier = Modifier,
+     onDismissRequest: () -> Unit
 ) {
     val pagerState = rememberPagerState { 2 }
     var selectedWifi by remember { mutableStateOf<WifiNetwork?>(null) }
@@ -99,7 +101,8 @@ fun WifiBottomSheetLayout(
                             selectedWifi = wifiNetwork
                             pagerState.animateScrollToPage(1)
                         }
-                    }
+                    },
+                    onCloseClick = onDismissRequest
                 )
             }
             1 -> {
@@ -118,11 +121,13 @@ fun WifiBottomSheetLayout(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SelectWifiLayout(
     wifiScanResult: StateResult<List<WifiNetwork>>,
     modifier: Modifier = Modifier,
-    onNetworkClick: (WifiNetwork) -> Unit
+    onNetworkClick: (WifiNetwork) -> Unit,
+    onCloseClick: () -> Unit
 ) {
     Card(
         modifier = modifier,
@@ -130,23 +135,41 @@ private fun SelectWifiLayout(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
     ) {
-        LazyColumn(modifier = Modifier.padding(horizontal = 20.dp)) {
-            item {
+        TopAppBar(
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
+            ),
+            title = {
                 Text(
+                    // Extra space to align with texts below
+                    modifier = Modifier.padding(start = 3.dp),
                     text = "Select Wi-Fi Network",
                     style = MaterialTheme.typography.titleLarge
                 )
-                Text(
-                    text = if(wifiScanResult is StateResult.Success) {
-                        "Choose a network for your device"
-                    } else {
-                        "Scanning wifi networks..."
-                    },
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(20.dp))
+            },
+            actions = {
+                IconButton(onClick = onCloseClick) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_close),
+                        contentDescription = null
+                    )
+                }
             }
+        )
 
+        Text(
+            modifier = Modifier.padding(horizontal = 20.dp),
+            text = if(wifiScanResult is StateResult.Success) {
+                "Choose a network for your device"
+            } else {
+                "Scanning wifi networks..."
+            },
+            style = MaterialTheme.typography.bodyMedium
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        LazyColumn(modifier = Modifier.padding(horizontal = 20.dp)) {
             when (wifiScanResult) {
                 StateResult.Loading -> {
                     item {
@@ -202,7 +225,6 @@ private fun EnterWifiPasswordLayout(
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainer
             ),
-            expandedHeight = 48.dp,
             title = {
                 Text(
                     text = "Enter Wi-Fi Password",
@@ -318,7 +340,7 @@ private fun WifiNetworkItem(
                 style = MaterialTheme.typography.bodyLarge
             )
 
-            IconButton(onClick = {}) {
+            IconButton(onClick = onClick) {
                 Icon(
                     painter = painterResource(R.drawable.ic_arrow_right),
                     contentDescription = null
@@ -368,7 +390,8 @@ private fun ConnectedWifiItem(
 private fun WifiBottomSheetLoadingPreview() {
     SimpleBLEClientTheme {
         WifiBottomSheetLayout(
-            wifiScanResult = StateResult.Loading
+            wifiScanResult = StateResult.Loading,
+            onDismissRequest = {}
         )
     }
 }
@@ -385,7 +408,8 @@ private fun WifiBottomSheetPreview() {
                     WifiNetwork(ssid = "Second floor", rssi = -50),
                     WifiNetwork(ssid = "Coffee shop free", rssi = -10),
                 )
-            )
+            ),
+            onDismissRequest = {}
         )
     }
 }
