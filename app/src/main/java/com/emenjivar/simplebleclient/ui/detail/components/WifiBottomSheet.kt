@@ -1,5 +1,6 @@
 package com.emenjivar.simplebleclient.ui.detail.components
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -88,9 +89,10 @@ fun WifiBottomSheetLayout(
     val coroutineScope = rememberCoroutineScope()
 
     HorizontalPager(
-        modifier = modifier,
+        modifier = modifier.animateContentSize(),
         state = pagerState,
-        userScrollEnabled = false
+        userScrollEnabled = false,
+        verticalAlignment = Alignment.Top
     ) { page ->
         when (page) {
             0 -> {
