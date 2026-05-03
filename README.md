@@ -6,6 +6,22 @@ An Android application paired with a Python GATT server for commissioning a Rasp
 
 <video src="https://github.com/user-attachments/assets/f0a714da-4d5c-4af6-b9b5-a2651bfe333c"></video>
 
+## Work in progress
+
+**Device management**
+- Reboot or shutdown the Pi remotely
+- Read CPU temperature and memory usage
+- Read the Pi model and OS version
+
+**Network**
+- Forget a saved Wi-Fi network
+- Switch between saved networks
+
+**Diagnostics**
+- Ping a host and return the result
+- Read system uptime
+- Tail the last N lines of a log file
+
 ## Architecture
 
 ```mermaid
