@@ -2,9 +2,9 @@
 
 An Android application paired with a Python GATT server for commissioning a Raspberry Pi over BLE. The app connects to the Pi to read its current network information and configure Wi-Fi credentials, making it possible to set up headless devices without a monitor or keyboard.
 
-## Demo
+## Demo (in progress)
 
-Video coming soon (in progress).
+<video src="https://github.com/user-attachments/assets/f0a714da-4d5c-4af6-b9b5-a2651bfe333c" />
 
 ## Architecture
 
