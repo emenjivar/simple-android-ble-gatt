@@ -95,7 +95,8 @@ fun DetailScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true
+        skipPartiallyExpanded = true,
+        confirmValueChange = { false }
     )
     var showBottomSheet by remember { mutableStateOf(false) }
     var openPermissionDeniedDialog by remember { mutableStateOf(false) }

@@ -1,7 +1,16 @@
 package com.emenjivar.simplebleclient.ui.detail.components
 
+import android.util.Log
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.AnimationState
+import androidx.compose.animation.core.animateDecay
+import androidx.compose.animation.splineBasedDecay
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,15 +42,20 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.input.pointer.util.addPointerInputChange
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -50,6 +65,7 @@ import com.emenjivar.simplebleclient.ui.theme.SimpleBLEClientTheme
 import com.emenjivar.simplebleclient.wifi.StateResult
 import com.emenjivar.simplebleclient.wifi.WifiNetwork
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.absoluteValue
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -80,16 +96,24 @@ fun WifiBottomSheet(
 @Composable
 @Stable
 fun WifiBottomSheetLayout(
-     wifiScanResult: StateResult<List<WifiNetwork>>,
-     modifier: Modifier = Modifier,
-     onDismissRequest: () -> Unit
+    wifiScanResult: StateResult<List<WifiNetwork>>,
+    modifier: Modifier = Modifier,
+    onDismissRequest: () -> Unit
 ) {
     val pagerState = rememberPagerState { 2 }
     var selectedWifi by remember { mutableStateOf<WifiNetwork?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
     HorizontalPager(
-        modifier = modifier.animateContentSize(),
+        modifier = modifier
+            .animateContentSize()
+            // Disable drag gesture from bottomSheet
+            // To prevent conflicts with wifi-list scrolling gestures
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDrag = { _, _ -> }
+                )
+            },
         state = pagerState,
         userScrollEnabled = false,
         verticalAlignment = Alignment.Top
@@ -107,6 +131,7 @@ fun WifiBottomSheetLayout(
                     onCloseClick = onDismissRequest
                 )
             }
+
             1 -> {
                 EnterWifiPasswordLayout(
                     ssid = selectedWifi?.ssid.orEmpty(),
@@ -131,6 +156,9 @@ private fun SelectWifiLayout(
     onNetworkClick: (WifiNetwork) -> Unit,
     onCloseClick: () -> Unit
 ) {
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(
@@ -161,7 +189,7 @@ private fun SelectWifiLayout(
 
         Text(
             modifier = Modifier.padding(horizontal = 20.dp),
-            text = if(wifiScanResult is StateResult.Success) {
+            text = if (wifiScanResult is StateResult.Success) {
                 "Choose a network for your device"
             } else {
                 "Scanning wifi networks..."
@@ -171,7 +199,11 @@ private fun SelectWifiLayout(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        LazyColumn(modifier = Modifier.padding(horizontal = 20.dp)) {
+        LazyColumn(
+            modifier = Modifier
+                .padding(horizontal = 20.dp),
+            state = listState
+        ) {
             when (wifiScanResult) {
                 StateResult.Loading -> {
                     item {
@@ -183,6 +215,7 @@ private fun SelectWifiLayout(
                         }
                     }
                 }
+
                 is StateResult.Success -> {
                     itemsIndexed(wifiScanResult.data) { index, wifiNetwork ->
                         WifiNetworkItem(
@@ -200,6 +233,7 @@ private fun SelectWifiLayout(
                         Spacer(modifier = Modifier.height(20.dp))
                     }
                 }
+
                 StateResult.Idle -> {}
             }
         }
@@ -270,7 +304,10 @@ private fun EnterWifiPasswordLayout(
                     TextObfuscationMode.RevealLastTyped
                 },
                 decorator = { innerTextField ->
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
                         innerTextField()
 
                         IconButton(
