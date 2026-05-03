@@ -113,7 +113,7 @@ class DetailViewModel @AssistedInject constructor(
                             ssid = result.SSID,
                             rssi = result.level
                         )
-                    }
+                    }.sortedByDescending { it.rssi }
 
                 _uiState.update {
                     it.copy(

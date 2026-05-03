@@ -49,6 +49,7 @@ import com.emenjivar.simplebleclient.ui.theme.SimpleBLEClientTheme
 import com.emenjivar.simplebleclient.wifi.StateResult
 import com.emenjivar.simplebleclient.wifi.WifiNetwork
 import kotlinx.coroutines.launch
+import kotlin.math.absoluteValue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -166,12 +167,6 @@ private fun SelectWifiLayout(
                             onClick = {
                                 onNetworkClick(wifiNetwork)
                             }
-                                // {
-                                // coroutineScope.launch {
-                                //     selectedWifi = wifiNetwork
-                                //     pagerState.animateScrollToPage(1)
-                                // }
-                                //}
                         )
                     }
 
@@ -302,8 +297,18 @@ private fun WifiNetworkItem(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val signalStrength = wifiNetwork.rssi.absoluteValue
             Icon(
-                painter = painterResource(R.drawable.ic_wifi),
+                painter = painterResource(
+                    when {
+                        signalStrength <= 60 -> R.drawable.ic_wifi_signal_5
+                        signalStrength <= 70 -> R.drawable.ic_wifi_signal_4
+                        signalStrength <= 80 -> R.drawable.ic_wifi_signal_3
+                        signalStrength <= 90 -> R.drawable.ic_wifi_signal_2
+                        signalStrength <= 100 -> R.drawable.ic_wifi_signal_1
+                        else -> R.drawable.ic_wifi_signal_0
+                    }
+                ),
                 contentDescription = null
             )
 
