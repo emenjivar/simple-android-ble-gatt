@@ -17,11 +17,6 @@ An Android application paired with a Python GATT server for commissioning a Rasp
 - Forget a saved Wi-Fi network
 - Switch between saved networks
 
-**Diagnostics**
-- Ping a host and return the result
-- Read system uptime
-- Tail the last N lines of a log file
-
 ## Architecture
 
 ```mermaid
