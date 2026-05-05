@@ -5,8 +5,12 @@ import subprocess
 ## UUIDS
 SERVICE_UUID            = '290edf15-b540-4e83-83cf-ba647bf4df20'
 CHARACTERISTIC_UUID     = '290edf15-b540-4e83-83cf-ba647bf4df21'
-GET_IP_UUID   = '290edf15-b540-4e83-83cf-ba647bf4df22'
-GET_SSID_UUID = '290edf15-b540-4e83-83cf-ba647bf4df23'
+GET_IP_UUID             = '290edf15-b540-4e83-83cf-ba647bf4df22'
+GET_SSID_UUID           = '290edf15-b540-4e83-83cf-ba647bf4df23'
+WIFI_SSID_UUID          = '290edf15-b540-4e83-83cf-ba647bf4df24'
+WIFI_PASSWORD_UUID      = '290edf15-b540-4e83-83cf-ba647bf4df25'
+WIFI_CONNECT_UUID       = '290edf15-b540-4e83-83cf-ba647bf4df26'
+WIFI_STATUS_UUID        = '290edf15-b540-4e83-83cf-ba647bf4df27'
 
 # Value to expose
 LED_OFF = 0x00
@@ -17,6 +21,10 @@ LED_STATE = [LED_OFF]
 led = LED(17)
 
 char_obj = None  # Direct reference to the characteristic
+
+pending_ssid = ""
+pending_password = ""
+wifi_status = list("idle".encode('utf-8'))
 
 def read_value():
     print(f"[READ] Characteristic was read: {LED_STATE}")
@@ -41,6 +49,61 @@ def get_ssid():
     except Exception:
         pass
     return list('N/A'.encode('utf8'))
+
+def read_wifi_status():
+    print(f"[WIFI] Status read: {bytes(wifi_status).decode('utf-8')}")
+    return wifi_status
+
+WIFI_STATUS_IDLE        = "idle"
+WIFI_STATUS_CONNECTED   = "connected"
+WIFI_STATUS_NOT_FOUND   = "error: ssid_not_found"
+WIFI_STATUS_AUTH_FAILED = "error: auth_failed"
+WIFI_STATUS_TIMEOUT     = "error: timeout"
+WIFI_STATUS_UNKNOWN     = "error: unknown"
+
+# nmcli exit codes: 0=success, 4=activation failed (wrong password), 10=ssid not found
+NMCLI_EXIT_CODES = {
+    0:  WIFI_STATUS_CONNECTED,
+    4:  WIFI_STATUS_AUTH_FAILED,
+    10: WIFI_STATUS_NOT_FOUND,
+}
+
+def connect_wifi(ssid, password):
+    global wifi_status
+    try:
+        print("[WIFI] Scanning for networks...")
+        subprocess.run(
+            ['nmcli', 'dev', 'wifi', 'rescan'],
+            capture_output=True, timeout=10
+        )
+        result = subprocess.run(
+            ['nmcli', 'dev', 'wifi', 'connect', ssid, 'password', password],
+            capture_output=True, text=True, timeout=30
+        )
+        status = NMCLI_EXIT_CODES.get(result.returncode, WIFI_STATUS_UNKNOWN)
+        print(f"[WIFI] nmcli exited {result.returncode} → {status}")
+        wifi_status = list(status.encode('utf-8'))
+        return result.returncode == 0
+    except subprocess.TimeoutExpired:
+        wifi_status = list(WIFI_STATUS_TIMEOUT.encode('utf-8'))
+        print("[WIFI] nmcli timed out")
+        return False
+
+def write_wifi_ssid(value, options):
+    global pending_ssid
+    pending_ssid = bytes(value).decode('utf-8')
+    print(f"[WIFI] SSID set: {pending_ssid}")
+
+def write_wifi_password(value, options):
+    global pending_password
+    pending_password = bytes(value).decode('utf-8')
+    print(f"[WIFI] Password set: {'*' * len(pending_password)}")
+
+def write_wifi_connect(value, options):
+    if bytes(value)[0] == 0x01:
+        print(f"[WIFI] Connecting to: {pending_ssid}")
+        success = connect_wifi(pending_ssid, pending_password)
+        print(f"[WIFI] Connect {'OK' if success else 'FAILED'}: {pending_ssid}")
 
 def notify_callback(notifying, characteristic):
     if notifying:
@@ -117,6 +180,54 @@ def main():
         notifying = False,
         flags = ['read'],
         read_callback = get_ssid,
+        write_callback = None,
+        notify_callback = None
+    )
+
+    app.add_characteristic(
+        srv_id = 1,
+        chr_id = 4,
+        uuid = WIFI_SSID_UUID,
+        value = [],
+        notifying = False,
+        flags = ['write'],
+        read_callback = None,
+        write_callback = write_wifi_ssid,
+        notify_callback = None
+    )
+
+    app.add_characteristic(
+        srv_id = 1,
+        chr_id = 5,
+        uuid = WIFI_PASSWORD_UUID,
+        value = [],
+        notifying = False,
+        flags = ['write'],
+        read_callback = None,
+        write_callback = write_wifi_password,
+        notify_callback = None
+    )
+
+    app.add_characteristic(
+        srv_id = 1,
+        chr_id = 6,
+        uuid = WIFI_CONNECT_UUID,
+        value = [0x00],
+        notifying = False,
+        flags = ['write'],
+        read_callback = None,
+        write_callback = write_wifi_connect,
+        notify_callback = None
+    )
+
+    app.add_characteristic(
+        srv_id = 1,
+        chr_id = 7,
+        uuid = WIFI_STATUS_UUID,
+        value = wifi_status,
+        notifying = False,
+        flags = ['read'],
+        read_callback = read_wifi_status,
         write_callback = None,
         notify_callback = None
     )

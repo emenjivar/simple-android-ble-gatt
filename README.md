@@ -58,8 +58,10 @@ pip install bluezero
 
 ```bash
 source ~/venv_bluetooth/bin/activate
-python3 gatt_server.py
+sudo python3 gatt_server.py
 ```
+
+> `sudo` is required for `nmcli` to connect to Wi-Fi networks.
 
 To exit the virtual environment, run `deactivate`.
 
@@ -80,7 +82,7 @@ After=network.target bluetooth.target
 
 [Service]
 Type=simple
-User=<user>
+User=root
 WorkingDirectory=<path>
 ExecStart=/home/<user>/venv_bluetooth/bin/python3 <path>/gatt_server.py
 Restart=on-failure
